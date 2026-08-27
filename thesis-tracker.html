@@ -1,0 +1,4018 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Thesis Tracker</title>
+<style>
+/* =========================================================
+   Color system. Every color in this file and in every inline
+   style comes from here. The only exception is workPackage.color,
+   which Part B defines as a stored hex value per package.
+   ========================================================= */
+:root{
+  /* ---- core palette ----
+     The page is a neutral near-white; cards carry a hint of green, one step
+     apart from it. Form controls stay pure white so they read as editable. */
+  --bg:#F6F7F6;
+  --surface:#FFFFFF;
+  --control:#FFFFFF;
+  --surface-muted:#F0F1F0;
+  --border:#D8E8C8;
+  --text:#1F2422;
+  --text-muted:#5E6462;
+  --accent:#2F6E5C;
+  --accent-hover:#24564A;
+  --accent-contrast:#FFFFFF;
+  --radius:10px;
+  --shadow:0 1px 3px rgba(31,42,34,.08), 0 1px 2px rgba(31,42,34,.06);
+
+  /* ---- derived from the core palette ---- */
+  --text-2:#3F4543;             /* secondary body text, between text and text-muted */
+  --surface-sunken:#EAEBEA;     /* milestone stripes, legend swatch */
+  --surface-hover:#F4F5F4;
+  --border-strong:#BFD7A9;
+  /* Progress-bar tracks are a deliberately neutral gray, never a green tint,
+     so an empty bar reads as empty next to the accent-green fill. */
+  --track:#D5D6D5;
+  /* Header band, pinned so it stays exactly as it was. */
+  --header-from:#F4F8ED;
+  --header-to:#FFFFFF;
+  /* Board columns: same treatment as the detail slide-over. */
+  --glass-col:rgba(238,239,238,.8);
+  --accent-weak:#E4EFE9;
+  --accent-border:#A9CBBE;
+  --radius-sm:6px;
+  --radius-pill:999px;
+  --shadow-pop:0 8px 24px rgba(31,42,34,.14);
+  --shadow-modal:0 12px 40px rgba(31,42,34,.22);
+  --shadow-panel:-8px 0 30px rgba(31,42,34,.12);
+  --scrim:rgba(28,30,28,.18);
+  --scrim-strong:rgba(28,30,28,.34);
+  --glass:rgba(255,255,255,.6);
+  --glass-blur:blur(12px);
+  --on-accent-line:var(--on-accent-line);
+  --on-accent-soft:var(--on-accent-soft);
+
+  /* ---- semantic, hues unchanged from the previous palette ---- */
+  --danger:#C02626;
+  --danger-bg:#FDECEB;
+  --danger-border:#E6BCBC;
+  --warning:#B45309;
+  --warning-bg:#FDF3E3;
+  --warning-border:#E8CF9F;
+  --success:#15803D;
+  --highlight:#FBE7A2;
+
+  /* ---- calendar event types ---- */
+  --event-supervisor:#3B5BDB;
+  --event-work:#475569;
+  --event-other:#9AA1AD;
+}
+*{box-sizing:border-box;}
+html,body{margin:0;padding:0;}
+body{
+  background:var(--bg);
+  color:var(--text);
+  font-family:Inter,-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+  font-size:13px;
+  line-height:1.45;
+  -webkit-font-smoothing:antialiased;
+}
+button,input,select,textarea{font-family:inherit;font-size:13px;color:inherit;}
+a{color:var(--accent);}
+
+/* ---------- banner ---------- */
+#storageBanner{
+  display:none;
+  background:var(--danger);
+  color:var(--accent-contrast);
+  padding:8px 20px;
+  font-weight:500;
+  letter-spacing:.1px;
+}
+#storageBanner.visible{display:block;}
+
+/* ---------- header ---------- */
+header.app{
+  background:linear-gradient(180deg, var(--header-from) 0%, var(--header-to) 100%);
+  border-bottom:1px solid var(--border);
+  padding:16px 20px 0 20px;
+  position:sticky;top:0;z-index:20;
+}
+.header-row{display:flex;align-items:baseline;gap:14px;padding-bottom:4px;}
+/* Deliberately one step up from body text, and deliberately far below the
+   dashboard countdown number, which stays the largest element on the page. */
+.brand{font-size:17px;font-weight:700;letter-spacing:-.25px;color:var(--text);white-space:nowrap;}
+.brand-sub{font-size:11.5px;color:var(--text-muted);flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.header-actions{display:flex;gap:6px;flex:0 0 auto;}
+
+nav.tabs{display:flex;gap:2px;margin-top:12px;}
+nav.tabs button{
+  background:none;border:none;border-bottom:2px solid transparent;
+  padding:7px 12px 8px 12px;cursor:pointer;color:var(--text-2);
+  font-size:13px;border-radius:var(--radius-sm) var(--radius-sm) 0 0;
+}
+nav.tabs button:hover{background:var(--surface-muted);color:var(--text);}
+nav.tabs button.active{color:var(--accent);border-bottom-color:var(--accent);font-weight:600;}
+
+/* ---------- layout ---------- */
+main{padding:18px 20px 70px 20px;max-width:1400px;}
+.view{display:none;}
+.view.active{display:block;}
+.view-head{display:flex;align-items:baseline;gap:10px;margin-bottom:12px;}
+h1{font-size:16px;margin:0;font-weight:600;letter-spacing:-.15px;}
+.view-head .count{font-size:11.5px;color:var(--text-muted);}
+h2{font-size:13px;margin:0 0 8px 0;font-weight:600;}
+
+.panel{
+  background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);
+  padding:14px;margin-bottom:14px;box-shadow:var(--shadow);
+}
+.grid-2{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin-bottom:14px;align-items:start;}
+.grid-3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin-bottom:14px;align-items:start;}
+
+/* ---------- buttons ---------- */
+.btn{
+  border:1px solid var(--border-strong);background:var(--control);color:var(--text-2);
+  padding:5px 10px;border-radius:var(--radius);cursor:pointer;white-space:nowrap;box-shadow:var(--shadow);
+}
+.btn:hover{background:var(--surface-muted);color:var(--text);}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:var(--accent-contrast);font-weight:500;}
+.btn.primary:hover{background:var(--accent-hover);}
+.btn.danger{color:var(--danger);border-color:var(--danger-border);}
+.btn.danger:hover{background:var(--danger-bg);}
+.btn.tiny{padding:2px 7px;font-size:11.5px;}
+
+/* ---------- forms ---------- */
+.form-row{display:flex;flex-wrap:wrap;gap:8px;align-items:flex-end;}
+.field{display:flex;flex-direction:column;gap:3px;}
+.field label{font-size:11px;color:var(--text-muted);text-transform:uppercase;letter-spacing:.4px;}
+.field input,.field select{
+  border:1px solid var(--border-strong);border-radius:var(--radius);padding:5px 7px;background:var(--control);height:28px;
+}
+.field input:focus,.field select:focus{outline:2px solid var(--accent-border);outline-offset:-1px;border-color:var(--accent);}
+.field.grow{flex:1;min-width:200px;}
+.check{display:flex;align-items:center;gap:5px;height:28px;color:var(--text-2);}
+.check input{margin:0;}
+
+/* ---------- table ---------- */
+table{width:100%;border-collapse:collapse;table-layout:fixed;}
+th{
+  text-align:left;font-size:10.5px;text-transform:uppercase;letter-spacing:.5px;
+  color:var(--text-muted);font-weight:600;padding:0 8px 6px 8px;border-bottom:1px solid var(--border);
+}
+td{padding:6px 8px;border-bottom:1px solid var(--border);vertical-align:top;overflow-wrap:break-word;}
+tr:last-child td{border-bottom:none;}
+tbody tr:hover{background:var(--surface-hover);}
+td.num,th.num{text-align:right;font-variant-numeric:tabular-nums;}
+td.actions{text-align:right;white-space:nowrap;}
+.title-cell{font-weight:500;color:var(--text);}
+.sub{font-size:11.5px;color:var(--text-muted);}
+
+/* ---------- chips ---------- */
+.chip{
+  display:inline-flex;align-items:center;gap:5px;font-size:11px;
+  border:1px solid var(--border-strong);border-radius:var(--radius-pill);padding:1px 8px;color:var(--text-2);
+  white-space:nowrap;max-width:100%;
+}
+.chip .dot{width:7px;height:7px;border-radius:50%;flex:0 0 auto;}
+.chip .lbl{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.chip.sample{border-style:dashed;color:var(--text-muted);}
+.chip.blocker{border-color:var(--danger-border);color:var(--danger);background:var(--danger-bg);font-weight:600;}
+.chip.overdue{border-color:var(--danger-border);color:var(--danger);background:var(--danger-bg);}
+.chip.due-today{border-color:var(--warning-border);color:var(--warning);background:var(--warning-bg);}
+.pill{font-size:11px;color:var(--text-2);background:var(--bg);border:1px solid var(--border);border-radius:var(--radius-sm);padding:1px 6px;white-space:nowrap;display:inline-block;}
+.tag-cloud{display:flex;flex-wrap:wrap;gap:5px;}
+.rel{font-variant-numeric:tabular-nums;letter-spacing:1px;color:var(--text-2);white-space:nowrap;}
+
+/* ---------- empty state ---------- */
+.empty{
+  border:1px dashed var(--border-strong);border-radius:var(--radius);
+  padding:22px;text-align:center;color:var(--text-muted);background:var(--surface-muted);
+}
+.empty strong{display:block;color:var(--text-2);font-size:13px;margin-bottom:3px;font-weight:600;}
+.placeholder{
+  border:1px dashed var(--border-strong);border-radius:var(--radius);
+  padding:34px 22px;text-align:center;color:var(--text-muted);background:var(--surface-muted);
+}
+.placeholder strong{display:block;color:var(--text-2);font-size:13px;margin-bottom:4px;}
+
+/* ---------- stats ---------- */
+.stat{border:1px solid var(--border);border-radius:var(--radius);padding:10px 12px;background:var(--surface);box-shadow:var(--shadow);}
+.stat .k{font-size:10.5px;text-transform:uppercase;letter-spacing:.5px;color:var(--text-muted);}
+.stat .v{font-size:20px;font-weight:600;font-variant-numeric:tabular-nums;letter-spacing:-.5px;margin-top:2px;}
+.stat .v small{font-size:12px;font-weight:400;color:var(--text-muted);letter-spacing:0;}
+
+/* ---------- footer ---------- */
+footer.app{
+  position:fixed;bottom:0;left:0;right:0;
+  background:var(--surface);border-top:1px solid var(--border);
+  padding:6px 20px;font-size:11.5px;color:var(--text-muted);
+  display:flex;gap:14px;align-items:center;z-index:20;
+}
+footer.app .spacer{flex:1;}
+
+/* ---------- filter bar ---------- */
+.filterbar{display:flex;flex-wrap:wrap;gap:8px;align-items:center;}
+.filterbar .spacer{flex:1;}
+.sel{border:1px solid var(--border-strong);background:var(--control);border-radius:var(--radius);height:28px;padding:0 6px;color:var(--text-2);cursor:pointer;max-width:190px;}
+.sel.on{border-color:var(--accent);color:var(--accent);background:var(--accent-weak);}
+.ms{position:relative;}
+.ms-btn{display:inline-flex;align-items:center;gap:6px;}
+.ms-btn .caret{color:var(--text-muted);font-size:9px;}
+.ms-btn.on{border-color:var(--accent);color:var(--accent);background:var(--accent-weak);}
+.ms-btn.on .caret{color:var(--accent);}
+.ms-pop{
+  position:absolute;top:calc(100% + 4px);left:0;z-index:30;background:var(--control);
+  border:1px solid var(--border-strong);border-radius:var(--radius);box-shadow:var(--shadow-pop);
+  padding:6px;min-width:250px;max-height:320px;overflow:auto;
+}
+.ms-pop label{display:flex;align-items:center;gap:7px;padding:3px 6px;border-radius:var(--radius-sm);cursor:pointer;}
+.ms-pop label:hover{background:var(--surface-muted);}
+.ms-pop .ms-foot{display:flex;justify-content:flex-end;border-top:1px solid var(--border);margin-top:5px;padding-top:6px;}
+.ms-pop .ms-none{padding:8px 6px;color:var(--text-muted);}
+kbd{font:inherit;font-size:10px;border:1px solid var(--on-accent-line);border-radius:var(--radius-sm);padding:0 4px;margin-left:3px;}
+
+/* ---------- board ---------- */
+#boardNotice:not(:empty),#calNotice:not(:empty){margin-bottom:12px;}
+.board{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:10px;align-items:start;}
+.col{
+  background:var(--glass-col);
+  backdrop-filter:var(--glass-blur);
+  -webkit-backdrop-filter:var(--glass-blur);
+  border:1px solid var(--border);border-radius:var(--radius);min-width:0;
+}
+.col > header{display:flex;align-items:center;gap:6px;padding:8px 9px 6px 9px;}
+.col-title{font-size:10.5px;font-weight:600;text-transform:uppercase;letter-spacing:.5px;color:var(--text-2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.col-count{margin-left:auto;font-size:10.5px;color:var(--text-muted);font-variant-numeric:tabular-nums;background:var(--control);border:1px solid var(--border);border-radius:var(--radius-pill);padding:0 6px;}
+.col-body{padding:0 7px 8px 7px;display:flex;flex-direction:column;gap:7px;min-height:70px;}
+.col.drag-over{background:var(--accent-weak);border-color:var(--accent-border);}
+.col-empty{font-size:10.5px;color:var(--text-muted);text-align:center;padding:14px 4px;border:1px dashed var(--border-strong);border-radius:var(--radius);}
+.drop-ph{border:1px dashed var(--accent);background:var(--control);border-radius:var(--radius);height:36px;flex:0 0 auto;}
+
+.card{
+  background:var(--surface);border:1px solid var(--border);border-left:3px solid var(--wp,var(--border-strong));
+  border-radius:var(--radius);padding:7px 8px;cursor:pointer;min-width:0;box-shadow:var(--shadow);
+  /* status changes fade instead of snapping; see flashTaskId in renderBoard */
+  transition:background-color 300ms ease, border-color .12s ease;
+}
+.card.flash{background:var(--accent-weak);}
+.card:hover{border-color:var(--accent);border-left-color:var(--wp,var(--accent));}
+.card.blocker{border-color:var(--danger);box-shadow:0 0 0 1px var(--danger);}
+.card.dragging{opacity:.35;}
+.card-title{font-size:12.5px;line-height:1.35;margin-bottom:5px;overflow-wrap:anywhere;}
+.card-row{display:flex;flex-wrap:wrap;align-items:center;gap:5px 6px;}
+.card-row + .card-row{margin-top:4px;}
+.card-wp{font-size:10px;color:var(--text-muted);font-weight:600;letter-spacing:.3px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:100%;}
+.card-date{font-size:10.5px;color:var(--text-muted);white-space:nowrap;}
+.card-date.overdue{color:var(--danger);font-weight:600;}
+.card-date.due-today{color:var(--warning);font-weight:600;}
+.mini{font-size:10px;border:1px solid var(--border);background:var(--bg);border-radius:var(--radius-sm);padding:0 4px;color:var(--text-2);white-space:nowrap;max-width:100%;overflow:hidden;text-overflow:ellipsis;}
+.mini.blocker{border-color:var(--danger-border);color:var(--danger);background:var(--danger-bg);font-weight:600;}
+.prio{display:inline-flex;align-items:flex-end;gap:1.5px;height:9px;flex:0 0 auto;}
+.prio i{width:3px;background:var(--border-strong);border-radius:1px;display:block;}
+.prio i:nth-child(1){height:4px;}
+.prio i:nth-child(2){height:6.5px;}
+.prio i:nth-child(3){height:9px;}
+.prio.p-low i:nth-child(1){background:var(--text-2);}
+.prio.p-medium i:nth-child(1),.prio.p-medium i:nth-child(2){background:var(--text-2);}
+.prio.p-high i{background:var(--text-2);}
+.note-flag{display:inline-flex;align-items:center;gap:3px;font-size:10px;color:var(--text-muted);flex:0 0 auto;}
+
+/* ---------- literature ---------- */
+.statrow{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:10px;margin-bottom:14px;}
+#litNotice:not(:empty){margin-bottom:14px;}
+th.sortable{cursor:pointer;user-select:none;}
+th.sortable:hover{color:var(--text);}
+th.sorted{color:var(--accent);}
+th .sort-ind{font-size:8px;margin-left:3px;vertical-align:middle;}
+tbody tr.rowlink{cursor:pointer;}
+tbody tr.rowlink:hover{background:var(--surface-hover);}
+.cell-tags{display:flex;flex-wrap:wrap;gap:3px;}
+
+/* ---------- dashboard ---------- */
+/* Smallest type on the page, muted: never competes with the countdown. */
+#dashLine{font-size:11px;color:var(--text-muted);margin:-4px 0 12px 2px;}
+.countdown{display:flex;align-items:baseline;gap:14px;flex-wrap:wrap;}
+.cd-num{font-size:46px;font-weight:600;letter-spacing:-1.6px;font-variant-numeric:tabular-nums;line-height:1;}
+.cd-txt{font-size:15px;color:var(--text-2);}
+.cd-sub{display:flex;gap:20px;flex-wrap:wrap;margin-top:12px;border-top:1px solid var(--border);padding-top:10px;}
+.cd-item{font-size:11px;color:var(--text-muted);max-width:290px;}
+.cd-item b{display:block;color:var(--text-2);font-weight:600;font-size:11.5px;}
+
+.bar{height:7px;background:var(--track);border-radius:var(--radius-sm);overflow:hidden;}
+.bar > i{display:block;height:100%;background:var(--accent);border-radius:var(--radius-sm);transition:width .15s;}
+.prog-row{display:grid;grid-template-columns:minmax(0,1fr) 96px;gap:10px;align-items:center;margin-bottom:9px;}
+.prog-lab{font-size:11.5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin-bottom:3px;
+  display:flex;align-items:center;gap:5px;}
+.prog-val{font-size:11px;color:var(--text-muted);text-align:right;font-variant-numeric:tabular-nums;}
+.prog-total{border-top:1px solid var(--border);margin-top:12px;padding-top:11px;}
+.prog-total .prog-lab{font-weight:600;color:var(--text);}
+.wordin{width:64px;border:1px solid var(--border-strong);border-radius:var(--radius-sm);height:22px;padding:0 5px;background:var(--control);
+  font-size:11px;text-align:right;font-variant-numeric:tabular-nums;}
+.wordin:focus{outline:2px solid var(--accent-border);outline-offset:-1px;border-color:var(--accent);}
+
+.panel.alarm{border-color:var(--danger-border);background:var(--danger-bg);}
+.panel.alarm h2{color:var(--danger);}
+.tile-list{display:flex;flex-direction:column;}
+.tile-row{display:flex;align-items:center;gap:8px;padding:5px 0;border-bottom:1px solid var(--border);cursor:pointer;font-size:12px;}
+.tile-row:last-child{border-bottom:none;}
+.tile-row:hover .tl-title{color:var(--accent);}
+.tile-row.static{cursor:default;}
+.tl-title{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.tl-when{font-size:10.5px;color:var(--text-muted);font-variant-numeric:tabular-nums;flex:0 0 auto;}
+.tl-when.overdue{color:var(--danger);font-weight:600;}
+.tl-when.due-today{color:var(--warning);font-weight:600;}
+
+.focus-row{display:flex;align-items:center;gap:9px;padding:7px 0;border-bottom:1px solid var(--border);}
+.focus-row:last-of-type{border-bottom:none;}
+.focus-row input[type=checkbox]{width:15px;height:15px;margin:0;flex:0 0 auto;cursor:pointer;}
+.focus-title{flex:1;min-width:0;font-size:12.5px;overflow-wrap:anywhere;cursor:pointer;}
+.focus-title:hover{color:var(--accent);}
+.focus-slots{font-size:11px;color:var(--text-muted);}
+
+/* ---------- supervisor ---------- */
+.meeting{padding:0;overflow:hidden;}
+.mtg-head{display:flex;align-items:center;gap:10px;padding:10px 14px;cursor:pointer;}
+.mtg-head:hover{background:var(--surface-hover);}
+.mtg-caret{color:var(--text-muted);font-size:9px;width:10px;flex:0 0 auto;}
+.mtg-date{font-weight:600;font-variant-numeric:tabular-nums;flex:0 0 auto;}
+.mtg-who{color:var(--text-muted);font-size:11.5px;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.mtg-body{padding:0 14px 14px 14px;border-top:1px solid var(--border);}
+.mtg-body .slide-sec{margin-bottom:14px;}
+.todo{display:flex;align-items:flex-start;gap:8px;padding:6px 0;border-bottom:1px solid var(--border);}
+.todo:last-of-type{border-bottom:none;}
+.todo input[type=checkbox]{margin:3px 0 0 0;flex:0 0 auto;}
+.todo-text{flex:1;min-width:0;border:1px solid transparent;border-radius:var(--radius-sm);padding:2px 5px;background:transparent;font-size:12px;}
+.todo-text:hover{border-color:var(--border);}
+.todo-text:focus{outline:2px solid var(--accent-border);outline-offset:-1px;border-color:var(--accent);background:var(--control);}
+.todo.done .todo-text{color:var(--text-muted);text-decoration:line-through;}
+.sugg{border:1px solid var(--border);border-radius:var(--radius);padding:8px 10px;margin-top:9px;background:var(--surface-muted);}
+.sugg-item{display:flex;gap:9px;align-items:flex-start;padding:6px 0;border-bottom:1px solid var(--border);}
+.sugg-item:last-of-type{border-bottom:none;}
+.sugg-text{flex:1;min-width:0;font-size:11.5px;overflow-wrap:anywhere;}
+.pt-row{display:flex;gap:6px;align-items:center;padding:4px 0;}
+.pt-row input{flex:1;min-width:0;border:1px solid transparent;border-radius:var(--radius-sm);padding:3px 5px;font-size:12px;background:transparent;}
+.pt-row input:hover{border-color:var(--border);}
+.pt-row input:focus{outline:2px solid var(--accent-border);outline-offset:-1px;border-color:var(--accent);background:var(--control);}
+
+/* ---------- search ---------- */
+mark{background:var(--highlight);color:inherit;padding:0 1px;border-radius:2px;}
+.res-group{margin-bottom:14px;}
+.res-group h2 .n{color:var(--text-muted);font-weight:400;}
+.res{border-bottom:1px solid var(--border);padding:8px 0;cursor:pointer;}
+.res:last-child{border-bottom:none;}
+.res:hover .res-title{color:var(--accent);}
+.res-title{font-size:12.5px;font-weight:500;overflow-wrap:anywhere;}
+.res-field{font-size:10px;text-transform:uppercase;letter-spacing:.5px;color:var(--text-muted);margin-top:2px;}
+.res-snip{font-size:11.5px;color:var(--text-2);line-height:1.5;margin-top:2px;overflow-wrap:anywhere;}
+#searchInput{flex:1;min-width:0;border:1px solid var(--border-strong);border-radius:var(--radius);height:30px;padding:0 9px;background:var(--control);}
+#searchInput:focus{outline:2px solid var(--accent-border);outline-offset:-1px;border-color:var(--accent);}
+
+/* ---------- schedule ---------- */
+.seg{display:inline-flex;border:1px solid var(--border-strong);border-radius:var(--radius);overflow:hidden;height:28px;}
+.seg button{border:none;background:var(--control);padding:0 12px;cursor:pointer;color:var(--text-2);border-right:1px solid var(--border);}
+.seg button:last-child{border-right:none;}
+.seg button:hover{background:var(--surface-muted);}
+.seg button.active{background:var(--accent);color:var(--accent-contrast);font-weight:600;}
+.legend{display:flex;flex-wrap:wrap;gap:10px;align-items:center;font-size:10.5px;color:var(--text-muted);}
+.legend span.k{display:inline-flex;align-items:center;gap:4px;}
+.legend .sw{width:9px;height:9px;border-radius:2px;display:inline-block;}
+
+.ci{display:flex;align-items:center;gap:5px;font-size:11px;padding:1.5px 5px;border-radius:var(--radius-sm);
+  border:1px solid var(--border);background:var(--control);cursor:pointer;min-width:0;line-height:1.35;}
+.ci:hover{border-color:var(--accent);}
+.ci .ci-t{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1;min-width:0;}
+.ci .ci-time{color:var(--text-muted);font-variant-numeric:tabular-nums;flex:0 0 auto;font-size:10px;}
+.ci-event{color:var(--accent-contrast);border-color:transparent;}
+.ci-event:hover{border-color:var(--text);}
+.ci-event .ci-time{color:var(--on-accent-soft);}
+.ci-task{border-left:3px solid var(--wp,var(--border-strong));}
+.ci-lit{border-left:3px dashed var(--wp,var(--border-strong));}
+.ci-ms{background:var(--surface-sunken);border-color:var(--border-strong);font-weight:600;cursor:default;}
+.ci-ms.hard{border-left:4px solid var(--text);}
+.ci-ms.soft{border-left:4px solid var(--text-muted);}
+.ci-ms:hover{border-color:var(--border-strong);}
+.ci-dot{width:7px;height:7px;border-radius:50%;flex:0 0 auto;background:var(--wp,var(--border-strong));}
+.ci-ring{width:7px;height:7px;border-radius:50%;flex:0 0 auto;border:2px solid var(--wp,var(--border-strong));background:transparent;}
+
+/* month */
+.month{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:1px;background:var(--border);
+  border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;}
+.month .dow{background:var(--surface-muted);padding:5px 7px;font-size:10px;text-transform:uppercase;letter-spacing:.5px;
+  color:var(--text-muted);font-weight:600;text-align:center;}
+.mcell{background:var(--surface);min-height:98px;padding:4px 5px;display:flex;flex-direction:column;gap:3px;cursor:pointer;}
+.mcell:hover{background:var(--surface-hover);}
+.mcell.out{background:var(--surface-muted);}
+.mcell.out .mnum{color:var(--border-strong);}
+.mnum{font-size:11px;color:var(--text-muted);font-variant-numeric:tabular-nums;align-self:flex-start;padding:0 3px;}
+.mcell.today .mnum{background:var(--warning);color:var(--accent-contrast);border-radius:var(--radius-pill);font-weight:600;}
+.more{font-size:10px;color:var(--accent);cursor:pointer;padding-left:3px;}
+.more:hover{text-decoration:underline;}
+
+/* week */
+.week{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:1px;background:var(--border);
+  border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;}
+.wcol{background:var(--surface);display:flex;flex-direction:column;min-height:300px;}
+.wcol > header{padding:6px 7px;border-bottom:1px solid var(--border);font-size:11px;color:var(--text-muted);text-align:center;}
+.wcol > header b{color:var(--text-2);}
+.wcol.today > header{background:var(--warning-bg);color:var(--warning);}
+.wcol.today > header b{color:var(--warning);}
+.wbody{padding:5px;display:flex;flex-direction:column;gap:4px;flex:1;cursor:pointer;}
+.wempty{font-size:10px;color:var(--border-strong);text-align:center;padding-top:8px;}
+
+/* day */
+.dayview{display:grid;grid-template-columns:minmax(0,1fr) 320px;gap:14px;align-items:start;}
+.allday{border:1px solid var(--border);border-radius:var(--radius);padding:7px;display:flex;flex-direction:column;gap:4px;
+  margin-bottom:10px;background:var(--surface-muted);}
+.subhead{margin:0 0 3px 0;font-size:10px;text-transform:uppercase;letter-spacing:.5px;color:var(--text-muted);font-weight:600;}
+.hours{position:relative;border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;}
+.hrow{display:grid;grid-template-columns:52px minmax(0,1fr);border-bottom:1px solid var(--border);height:40px;}
+.hrow:last-child{border-bottom:none;}
+.hlabel{font-size:10.5px;color:var(--text-muted);padding:2px 7px 0 0;text-align:right;border-right:1px solid var(--border);
+  font-variant-numeric:tabular-nums;}
+.hslot{cursor:pointer;}
+.hslot:hover{background:var(--accent-weak);}
+.evlayer{position:absolute;left:52px;right:0;top:0;bottom:0;pointer-events:none;}
+.evblock{position:absolute;pointer-events:auto;border-radius:var(--radius-sm);color:var(--accent-contrast);font-size:11px;padding:2px 6px;
+  overflow:hidden;cursor:pointer;line-height:1.3;box-shadow:var(--shadow);}
+.evblock .t{font-weight:600;}
+.evblock .h{color:var(--on-accent-soft);font-variant-numeric:tabular-nums;font-size:10px;}
+.agenda{border:1px solid var(--border);border-radius:var(--radius);padding:11px;}
+.agenda-item{display:flex;gap:9px;padding:7px 0;border-bottom:1px solid var(--border);cursor:pointer;}
+.agenda-item:last-child{border-bottom:none;}
+.agenda-item:hover .ag-title{color:var(--accent);}
+.agenda-item.static{cursor:default;}
+.ag-when{flex:0 0 46px;font-size:10.5px;color:var(--text-muted);font-variant-numeric:tabular-nums;padding-top:1px;}
+.ag-main{flex:1;min-width:0;}
+.ag-title{font-size:12px;overflow-wrap:anywhere;}
+
+/* timeline */
+.tl{position:relative;height:250px;margin-top:4px;}
+.tl-axis{position:absolute;left:0;right:0;top:130px;height:2px;background:var(--border-strong);border-radius:2px;}
+.tl-pt{position:absolute;top:124px;width:12px;height:12px;border-radius:50%;background:var(--text);
+  transform:translateX(-50%);box-shadow:0 0 0 2px var(--control);}
+.tl-pt.soft{background:var(--control);border:2px solid var(--text-muted);}
+.tl-pt.unknown{background:var(--control);border:2px dashed var(--text);}
+.tl-conn{position:absolute;width:1px;background:var(--border-strong);transform:translateX(-50%);}
+.tl-conn.dashed{background:none;border-left:1px dashed var(--text-muted);}
+.tl-lab{position:absolute;transform:translateX(-50%);width:140px;text-align:center;font-size:10.5px;line-height:1.35;}
+.tl-lab .d{color:var(--text-muted);font-variant-numeric:tabular-nums;}
+.tl-lab .t{color:var(--text);font-weight:500;overflow-wrap:anywhere;}
+.tl-now{position:absolute;top:0;bottom:20px;width:0;border-left:1px dashed var(--accent);transform:translateX(-50%);}
+.tl-now-lab{position:absolute;bottom:0;transform:translateX(-50%);font-size:10px;color:var(--accent);font-weight:600;}
+
+/* linked tasks */
+.linked{display:flex;flex-wrap:wrap;gap:5px;}
+.linked .chip .lbl{cursor:pointer;}
+.linked .chip .lbl:hover{color:var(--accent);text-decoration:underline;}
+.linked .chip button{border:none;background:none;cursor:pointer;color:var(--text-muted);padding:0 0 0 3px;font-size:13px;line-height:1;}
+.linked .chip button:hover{color:var(--danger);}
+
+/* ---------- quotes ---------- */
+.quotes{list-style:none;margin:10px 0 0 0;padding:0;display:flex;flex-direction:column;gap:8px;}
+.quote{border:1px solid var(--border);border-left:3px solid var(--border-strong);border-radius:var(--radius);padding:7px 9px;background:var(--surface-muted);}
+.quote-head{display:flex;align-items:center;gap:6px;margin-bottom:5px;}
+.quote-head .sub{flex:1;}
+.quote-text{font-size:12.5px;line-height:1.5;overflow-wrap:anywhere;}
+.quote-form{display:grid;grid-template-columns:1fr 90px;gap:6px;margin-top:8px;}
+.quote-form textarea{grid-column:1 / -1;}
+.quote-form .qf-actions{grid-column:1 / -1;display:flex;justify-content:flex-end;}
+
+/* ---------- slide-over ---------- */
+.slide-back{position:fixed;inset:0;background:var(--scrim);z-index:40;opacity:0;transition:opacity .16s ease;}
+.slide-back.open{opacity:1;}
+.slide{
+  position:fixed;top:0;right:0;bottom:0;width:480px;max-width:calc(100vw - 40px);
+  /* The one glass surface in the app. Everything text-dense underneath it
+     — tables, board columns, the calendar — stays fully opaque. */
+  background:var(--glass);
+  backdrop-filter:var(--glass-blur);
+  -webkit-backdrop-filter:var(--glass-blur);
+  border-left:1px solid var(--border);z-index:41;
+  box-shadow:var(--shadow-panel);
+  display:flex;flex-direction:column;transform:translateX(100%);transition:transform .18s ease;
+}
+@supports not ((backdrop-filter:blur(1px)) or (-webkit-backdrop-filter:blur(1px))){
+  .slide{background:var(--surface);}
+  .col{background:var(--surface-muted);}
+}
+.slide.open{transform:translateX(0);}
+.slide > header{display:flex;align-items:center;gap:8px;padding:11px 14px;border-bottom:1px solid var(--border);}
+.slide > header h3{margin:0;font-size:12px;font-weight:600;flex:1;text-transform:uppercase;letter-spacing:.5px;color:var(--text-muted);}
+.slide-body{overflow:auto;padding:14px;flex:1;}
+.slide-sec{margin-bottom:16px;}
+.slide-sec:last-child{margin-bottom:0;}
+.slide-sec h4{margin:0 0 7px 0;font-size:10.5px;text-transform:uppercase;letter-spacing:.5px;color:var(--text-muted);font-weight:600;}
+.fgrid{display:grid;grid-template-columns:1fr 1fr;gap:8px;}
+.fgrid .wide{grid-column:1 / -1;}
+.f{display:flex;flex-direction:column;gap:3px;min-width:0;}
+.f label{font-size:10.5px;color:var(--text-muted);text-transform:uppercase;letter-spacing:.4px;}
+.f input,.f select,.f textarea{border:1px solid var(--border-strong);border-radius:var(--radius);padding:5px 7px;background:var(--control);width:100%;}
+.f input,.f select{height:28px;}
+.f textarea{resize:none;overflow-y:auto;line-height:1.5;min-height:30px;max-height:460px;}
+.f input:focus,.f select:focus,.f textarea:focus{outline:2px solid var(--accent-border);outline-offset:-1px;border-color:var(--accent);}
+.tag-edit{display:flex;flex-wrap:wrap;gap:5px;align-items:center;}
+.tag-edit .chip button{border:none;background:none;cursor:pointer;color:var(--text-muted);padding:0 0 0 3px;font-size:13px;line-height:1;}
+.tag-edit .chip button:hover{color:var(--danger);}
+.inline-form{display:flex;gap:6px;margin-top:8px;}
+.inline-form input{flex:1;min-width:0;border:1px solid var(--border-strong);border-radius:var(--radius);padding:5px 7px;height:28px;background:var(--control);}
+.inline-form input:focus{outline:2px solid var(--accent-border);outline-offset:-1px;border-color:var(--accent);}
+.notes{list-style:none;margin:10px 0 0 0;padding:0;display:flex;flex-direction:column;gap:8px;}
+.note{border:1px solid var(--border);border-radius:var(--radius);padding:7px 8px;background:var(--surface-muted);}
+.note-head{display:flex;align-items:center;gap:6px;margin-bottom:5px;}
+.note-head .sub{flex:1;}
+.note textarea{background:var(--control);}
+.att{display:flex;align-items:center;gap:6px;padding:5px 0;border-bottom:1px solid var(--border);}
+.att:last-of-type{border-bottom:none;}
+.att .att-name{flex:0 0 auto;max-width:40%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:500;}
+.att .att-url{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:11.5px;}
+.meta-line{font-size:11px;color:var(--text-muted);border-top:1px solid var(--border);padding-top:9px;}
+
+/* ---------- modal ---------- */
+.modal-back{
+  position:fixed;inset:0;background:var(--scrim-strong);
+  display:flex;align-items:center;justify-content:center;z-index:50;
+}
+.modal{
+  background:var(--control);border-radius:var(--radius);width:440px;max-width:calc(100vw - 40px);
+  box-shadow:var(--shadow-modal);padding:18px;
+}
+.modal h3{margin:0 0 6px 0;font-size:14px;font-weight:600;}
+.modal p{margin:0 0 14px 0;color:var(--text-2);}
+.modal .modal-actions{display:flex;justify-content:flex-end;gap:8px;}
+.hidden{display:none !important;}
+</style>
+</head>
+<body>
+
+<div id="storageBanner">Storage unavailable &mdash; your data will be lost when you close this tab. Open this file from a local server or a hosted URL instead.</div>
+
+<header class="app">
+  <div class="header-row">
+    <div class="brand">Thesis Tracker</div>
+    <div class="brand-sub">Modelling the high-risk obligations of the EU AI Act as DCR graphs</div>
+    <div class="header-actions">
+      <button class="btn" id="btnExport">Export</button>
+      <button class="btn" id="btnImport">Import</button>
+      <button class="btn danger" id="btnClearSample">Clear sample data</button>
+      <input type="file" id="importFile" accept="application/json,.json" class="hidden">
+    </div>
+  </div>
+  <nav class="tabs" id="tabs">
+    <button data-tab="dashboard" class="active">Dashboard</button>
+    <button data-tab="board">Board</button>
+    <button data-tab="literature">Literature</button>
+    <button data-tab="schedule">Schedule</button>
+    <button data-tab="supervisor">Supervisor</button>
+    <button data-tab="search">Search</button>
+  </nav>
+</header>
+
+<main>
+
+  <!-- ================= DASHBOARD ================= -->
+  <section class="view active" id="view-dashboard">
+    <div class="view-head"><h1>Dashboard</h1><span class="count" id="dashMeta"></span>
+      <span style="flex:1"></span>
+      <label class="check"><input type="checkbox" id="focusOnly"> Focus only</label>
+    </div>
+    <div id="dashLine"></div>
+    <div id="dashCountdown"></div>
+    <div id="dashFocus"></div>
+    <div id="dashRest"></div>
+  </section>
+
+  <!-- ================= BOARD ================= -->
+  <section class="view" id="view-board">
+    <div class="view-head"><h1>Board</h1><span class="count" id="taskCount"></span></div>
+    <div class="panel filterbar">
+      <div class="ms" id="msWp">
+        <button type="button" class="btn ms-btn" data-ms-toggle>Work package <span class="caret">&#9662;</span></button>
+        <div class="ms-pop hidden"></div>
+      </div>
+      <div class="ms" id="msTag">
+        <button type="button" class="btn ms-btn" data-ms-toggle>Tag <span class="caret">&#9662;</span></button>
+        <div class="ms-pop hidden"></div>
+      </div>
+      <select id="fPriority" class="sel" aria-label="Priority filter">
+        <option value="">Any priority</option>
+        <option value="high">High</option>
+        <option value="medium">Medium</option>
+        <option value="low">Low</option>
+      </select>
+      <label class="check"><input type="checkbox" id="fOverdue"> Overdue only</label>
+      <label class="check"><input type="checkbox" id="fBlockers"> Blockers only</label>
+      <button class="btn" id="fReset">Reset filters</button>
+      <span class="spacer"></span>
+      <button class="btn primary" id="btnNewTask">New task<kbd>n</kbd></button>
+    </div>
+    <div id="boardNotice"></div>
+    <div class="board" id="board"></div>
+  </section>
+
+  <!-- ================= LITERATURE ================= -->
+  <section class="view" id="view-literature">
+    <div class="view-head"><h1>Literature</h1><span class="count" id="litCount"></span></div>
+    <div class="statrow" id="litStats"></div>
+    <div class="panel filterbar">
+      <div class="ms" id="msLitWp">
+        <button type="button" class="btn ms-btn" data-ms-toggle>Work package <span class="caret">&#9662;</span></button>
+        <div class="ms-pop hidden"></div>
+      </div>
+      <div class="ms" id="msLitTag">
+        <button type="button" class="btn ms-btn" data-ms-toggle>Tag <span class="caret">&#9662;</span></button>
+        <div class="ms-pop hidden"></div>
+      </div>
+      <select id="lfStatus" class="sel" aria-label="Status filter">
+        <option value="">Any status</option>
+        <option value="backlog">Backlog</option>
+        <option value="toRead">To read</option>
+        <option value="read">Read</option>
+        <option value="excerpted">Excerpted</option>
+        <option value="discarded">Discarded</option>
+      </select>
+      <select id="lfType" class="sel" aria-label="Type filter">
+        <option value="">Any type</option>
+        <option>Paper</option>
+        <option>Legal text</option>
+        <option>Book</option>
+        <option>Report</option>
+        <option>Other</option>
+      </select>
+      <select id="lfRelevance" class="sel" aria-label="Relevance filter">
+        <option value="">Any relevance</option>
+        <option value="5">Relevance 5</option>
+        <option value="4">Relevance 4</option>
+        <option value="3">Relevance 3</option>
+        <option value="2">Relevance 2</option>
+        <option value="1">Relevance 1</option>
+      </select>
+      <select id="lfChapter" class="sel" aria-label="Chapter filter"></select>
+      <button class="btn" id="lfReset">Reset filters</button>
+      <span class="spacer"></span>
+      <button class="btn" id="btnExportQuotes">Export quotes</button>
+      <button class="btn primary" id="btnNewLit">New entry</button>
+    </div>
+    <div id="litNotice"></div>
+    <div class="panel">
+      <div id="litList"></div>
+    </div>
+  </section>
+
+  <!-- ================= PLACEHOLDERS ================= -->
+  <section class="view" id="view-schedule">
+    <div class="view-head"><h1>Schedule</h1><span class="count" id="calLabel"></span></div>
+    <div class="panel filterbar">
+      <div class="seg" id="calSeg">
+        <button type="button" data-calview="day">Day</button>
+        <button type="button" data-calview="week">Week</button>
+        <button type="button" data-calview="month">Month</button>
+      </div>
+      <button class="btn" id="calPrev" title="Previous">&#9664;</button>
+      <button class="btn" id="calToday">Today</button>
+      <button class="btn" id="calNext" title="Next">&#9654;</button>
+      <span class="spacer"></span>
+      <div class="legend" id="calLegend"></div>
+      <button class="btn primary" id="btnNewEvent">New event</button>
+    </div>
+    <div id="calNotice"></div>
+    <div class="panel" id="calBody"></div>
+    <div class="panel">
+      <h2>Milestone timeline</h2>
+      <div id="msTimeline"></div>
+    </div>
+  </section>
+
+  <section class="view" id="view-supervisor">
+    <div class="view-head"><h1>Supervisor</h1><span class="count" id="supCount"></span></div>
+    <div class="panel" id="nextMeetingPrep"></div>
+    <div class="panel filterbar">
+      <strong style="font-size:13px">Meeting log</strong>
+      <span class="spacer"></span>
+      <button class="btn primary" id="btnNewMeeting">New meeting log</button>
+    </div>
+    <div id="meetingList"></div>
+  </section>
+
+  <section class="view" id="view-search">
+    <div class="view-head"><h1>Search</h1><span class="count" id="searchCount"></span></div>
+    <div class="panel filterbar">
+      <input id="searchInput" type="search" placeholder="Search task titles and notes, excerpts, quotes, meeting feedback, agenda points…" autocomplete="off">
+      <button class="btn" id="searchClear">Clear</button>
+    </div>
+    <div id="searchResults"></div>
+  </section>
+
+</main>
+
+<footer class="app">
+  <span id="savedLabel">Last saved: never</span>
+  <span class="spacer"></span>
+  <span id="storageLabel"></span>
+  <span id="schemaLabel"></span>
+</footer>
+
+<div id="panelRoot"></div>
+<div id="modalRoot"></div>
+
+<script>
+"use strict";
+
+/* =========================================================
+   Constants
+   ========================================================= */
+var STORAGE_KEY    = "thesisTracker";
+var SAMPLE_KEY     = "thesisTrackerSampleIds"; /* sample bookkeeping, kept OUT of state */
+var PROBE_KEY      = "thesisTracker__probe";
+var SCHEMA_VERSION = 1;
+var COUNTDOWN_ANCHOR = "2026-11-19"; /* internal hard deadline: thesis content-complete */
+
+/* =========================================================
+   Date helpers (local time only, never toISOString)
+   ========================================================= */
+function isoOf(d) {
+  return d.getFullYear() + "-" +
+    String(d.getMonth() + 1).padStart(2, "0") + "-" +
+    String(d.getDate()).padStart(2, "0");
+}
+function today() { return isoOf(new Date()); }
+/* Guards every date comparison against malformed values from a hand-edited import. */
+function isIsoDate(s) {
+  return typeof s === "string" && /^\d{4}-\d{2}-\d{2}$/.test(s);
+}
+function dateAdd(iso, days) {
+  var p = iso.split("-").map(Number);
+  var d = new Date(p[0], p[1] - 1, p[2]);
+  d.setDate(d.getDate() + days);
+  return isoOf(d);
+}
+function daysBetween(isoA, isoB) {
+  var a = isoA.split("-").map(Number), b = isoB.split("-").map(Number);
+  return Math.round((new Date(b[0], b[1] - 1, b[2]) - new Date(a[0], a[1] - 1, a[2])) / 86400000);
+}
+var MONTHS = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+function formatDate(iso) {
+  if (!iso) return "";
+  var p = String(iso).split("-");
+  if (p.length !== 3) return String(iso);
+  return Number(p[2]) + " " + MONTHS[Number(p[1]) - 1] + " " + p[0];
+}
+function uid() {
+  if (window.crypto && typeof crypto.randomUUID === "function") return crypto.randomUUID();
+  return "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g, function (c) {
+    var r = (Math.random() * 16) | 0;
+    return (c === "x" ? r : (r & 3) | 8).toString(16);
+  });
+}
+function esc(s) {
+  return String(s == null ? "" : s)
+    .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;").replace(/'/g, "&#39;");
+}
+
+/* =========================================================
+   State
+   ========================================================= */
+function blankState() {
+  return {
+    schemaVersion: SCHEMA_VERSION,
+    workPackages: [],
+    tasks: [],
+    literature: [],
+    milestones: [],
+    events: [],
+    meetings: [],
+    chapters: [],
+    tags: [],
+    focusToday: [],
+    meta: { lastSaved: null }
+  };
+}
+
+var state = blankState();
+var sampleIds = { tasks: [], literature: [] };
+var pendingSampleIds = { tasks: [], literature: [] };
+var storageOK = true;
+
+/* =========================================================
+   Persistence
+   ========================================================= */
+function probeStorage() {
+  try {
+    localStorage.setItem(PROBE_KEY, "1");
+    var back = localStorage.getItem(PROBE_KEY);
+    localStorage.removeItem(PROBE_KEY);
+    return back === "1";
+  } catch (e) { return false; }
+}
+
+function setStorageBanner(show) {
+  document.getElementById("storageBanner").classList.toggle("visible", !!show);
+  document.getElementById("storageLabel").textContent = show ? "Storage: unavailable" : "Storage: localStorage";
+}
+
+function save() {
+  state.meta.lastSaved = new Date().toISOString();
+  if (storageOK) {
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+      localStorage.setItem(SAMPLE_KEY, JSON.stringify(sampleIds));
+    } catch (e) {
+      storageOK = false;
+      setStorageBanner(true);
+    }
+  }
+  renderFooter();
+}
+
+/* Coerce anything into the current shape. Never throws. */
+function migrate(raw) {
+  var base = blankState();
+  if (!raw || typeof raw !== "object") return base;
+
+  ["workPackages","tasks","literature","milestones","events","meetings","chapters","tags","focusToday"]
+    .forEach(function (k) { base[k] = Array.isArray(raw[k]) ? raw[k] : []; });
+
+  if (raw.meta && typeof raw.meta === "object") base.meta.lastSaved = raw.meta.lastSaved || null;
+  base.schemaVersion = SCHEMA_VERSION;
+
+  base.tasks.forEach(function (t) {
+    t.tags = Array.isArray(t.tags) ? t.tags : [];
+    t.notes = Array.isArray(t.notes) ? t.notes : [];
+    t.attachments = Array.isArray(t.attachments) ? t.attachments : [];
+    if (typeof t.isBlocker !== "boolean") t.isBlocker = false;
+    if (t.completedAt === undefined) t.completedAt = null;
+    if (t.workPackageId === undefined) t.workPackageId = null;
+    if (t.dueDate === undefined || t.dueDate === null) t.dueDate = "";
+  });
+  base.literature.forEach(function (l) {
+    l.tags = Array.isArray(l.tags) ? l.tags : [];
+    l.quotes = Array.isArray(l.quotes) ? l.quotes : [];
+    l.notes = Array.isArray(l.notes) ? l.notes : [];
+    l.attachments = Array.isArray(l.attachments) ? l.attachments : [];
+    if (!l.excerpt || typeof l.excerpt !== "object") {
+      l.excerpt = { keyClaim: "", methodology: "", relevanceToThesis: "", openQuestions: "" };
+    }
+    if (l.chapterId === undefined) l.chapterId = null;
+    if (l.workPackageId === undefined) l.workPackageId = null;
+    if (l.readBy === undefined || l.readBy === null) l.readBy = "";
+  });
+  base.milestones.forEach(function (m) {
+    if (typeof m.dateUnknown !== "boolean") m.dateUnknown = false;
+  });
+  base.events.forEach(function (e) {
+    e.linkedTasks = Array.isArray(e.linkedTasks) ? e.linkedTasks : [];
+  });
+  base.meetings.forEach(function (m) {
+    m.todos = Array.isArray(m.todos) ? m.todos : [];
+    m.attachments = Array.isArray(m.attachments) ? m.attachments : [];
+  });
+  /* Reference sweep: the same cleanup rules the delete functions apply, run over
+     whatever arrives from storage or an import, so no dangling ID can survive. */
+  function known(list) {
+    var set = {};
+    list.forEach(function (o) { if (o && o.id) set[o.id] = true; });
+    return set;
+  }
+  var taskIds = known(base.tasks);
+  var wpIds = known(base.workPackages);
+  var chapterIds = known(base.chapters);
+
+  base.focusToday = base.focusToday.filter(function (id) { return taskIds[id]; }).slice(0, 3);
+  base.events.forEach(function (e) {
+    e.linkedTasks = e.linkedTasks.filter(function (id) { return taskIds[id]; });
+  });
+  base.meetings.forEach(function (m) {
+    m.todos.forEach(function (td) { if (td.taskId && !taskIds[td.taskId]) td.taskId = null; });
+  });
+  base.tasks.forEach(function (t) {
+    if (t.workPackageId && !wpIds[t.workPackageId]) t.workPackageId = null;
+  });
+  base.literature.forEach(function (l) {
+    if (l.workPackageId && !wpIds[l.workPackageId]) l.workPackageId = null;
+    if (l.chapterId && !chapterIds[l.chapterId]) l.chapterId = null;
+    l.quotes.forEach(function (q) { if (q.chapterId && !chapterIds[q.chapterId]) q.chapterId = null; });
+  });
+
+  return base;
+}
+
+/* Part B: deleting a work package detaches its tasks instead of deleting them.
+   No view offers this yet; the rule lives here so the cleanup is defined in one place. */
+function deleteWorkPackage(id) {
+  state.workPackages = state.workPackages.filter(function (w) { return w.id !== id; });
+  state.tasks.forEach(function (t) { if (t.workPackageId === id) t.workPackageId = null; });
+  state.literature.forEach(function (l) { if (l.workPackageId === id) l.workPackageId = null; });
+  save();
+}
+
+function load() {
+  storageOK = probeStorage();
+  setStorageBanner(!storageOK);
+
+  if (!storageOK) {
+    state = seedState();
+    sampleIds = pendingSampleIds;
+    renderFooter();
+    return;
+  }
+
+  var raw = null;
+  try {
+    var txt = localStorage.getItem(STORAGE_KEY);
+    if (txt) raw = JSON.parse(txt);
+  } catch (e) { raw = null; }
+
+  if (!raw) {
+    state = seedState();
+    sampleIds = pendingSampleIds;
+    save();
+    return;
+  }
+
+  var needsMigration = raw.schemaVersion !== SCHEMA_VERSION;
+  state = migrate(raw);
+  try {
+    var s = JSON.parse(localStorage.getItem(SAMPLE_KEY) || "null");
+    if (s && Array.isArray(s.tasks) && Array.isArray(s.literature)) sampleIds = s;
+  } catch (e) { /* keep default */ }
+
+  if (needsMigration) save(); else renderFooter();
+}
+
+/* =========================================================
+   Modal / confirmation
+   ========================================================= */
+function confirmDialog(title, message, confirmLabel, dangerous) {
+  return new Promise(function (resolve) {
+    var root = document.getElementById("modalRoot");
+    var cls = dangerous === false ? "btn primary" : "btn danger";
+    root.innerHTML =
+      '<div class="modal-back"><div class="modal" role="dialog" aria-modal="true">' +
+        "<h3>" + esc(title) + "</h3>" +
+        "<p>" + esc(message) + "</p>" +
+        '<div class="modal-actions">' +
+          '<button class="btn" id="mCancel">Cancel</button>' +
+          '<button class="' + cls + '" id="mOk">' + esc(confirmLabel || "Delete") + "</button>" +
+        "</div></div></div>";
+    function close(v) { root.innerHTML = ""; document.removeEventListener("keydown", onKey); resolve(v); }
+    function onKey(e) { if (e.key === "Escape") close(false); }
+    document.getElementById("mCancel").onclick = function () { close(false); };
+    document.getElementById("mOk").onclick = function () { close(true); };
+    root.querySelector(".modal-back").onclick = function (e) { if (e.target === this) close(false); };
+    document.addEventListener("keydown", onKey);
+    document.getElementById("mOk").focus();
+  });
+}
+function noticeDialog(title, message) {
+  return new Promise(function (resolve) {
+    var root = document.getElementById("modalRoot");
+    root.innerHTML =
+      '<div class="modal-back"><div class="modal" role="dialog" aria-modal="true">' +
+        "<h3>" + esc(title) + "</h3><p>" + esc(message) + "</p>" +
+        '<div class="modal-actions"><button class="btn primary" id="mOk">OK</button></div>' +
+      "</div></div>";
+    function close() { root.innerHTML = ""; document.removeEventListener("keydown", onKey); resolve(); }
+    function onKey(e) { if (e.key === "Escape" || e.key === "Enter") close(); }
+    document.getElementById("mOk").onclick = close;
+    document.addEventListener("keydown", onKey);
+    document.getElementById("mOk").focus();
+  });
+}
+
+/* =========================================================
+   Seed data (Part D)
+   ========================================================= */
+function seedState() {
+  var s = blankState();
+  var t0 = today();
+  pendingSampleIds = { tasks: [], literature: [] };
+  var wp = {};
+
+  /* ---- work packages ------------------------------------------------ */
+  function addWp(code, title, track, start, target, color, status, description) {
+    var o = {
+      id: uid(), title: title, track: track,
+      description: code + " — " + description,
+      startDate: start, targetDate: target, color: color, status: status
+    };
+    s.workPackages.push(o);
+    wp[code] = o;
+    return o;
+  }
+  addWp("WP-SCOPE", "Scoping & research design", "preparation", "2026-08-25", "2026-09-07",
+        "#6d28d9", "active", "Research question, scope boundaries, method decisions.");
+  /* the seven literature packages share a blue-to-green ramp so they read as one group */
+  addWp("WP-LR1", "Literature: regulatory uncertainty & SMEs", "preparation", "2026-08-25", "2026-09-14",
+        "#1e3a8a", "active", "Regulatory uncertainty as an adoption barrier, German SMEs and mid-caps.");
+  addWp("WP-LR2", "Literature: high-risk classification (Art. 6, Annex III)", "preparation", "2026-08-25", "2026-09-21",
+        "#1d4ed8", "active", "Art. 6(2), Annex III and the Art. 6(3) exceptions.");
+  addWp("WP-LR3", "Literature: operator roles & Article 25", "preparation", "2026-09-01", "2026-09-28",
+        "#2f7fe0", "open", "Provider, deployer, importer, distributor, authorised representative.");
+  addWp("WP-LR4", "Literature: compliance lifecycle Art. 9–15, 17, 40–49", "preparation", "2026-09-07", "2026-10-05",
+        "#0369a1", "open", "Risk management, data governance, documentation, conformity assessment, registration.");
+  addWp("WP-LR5", "Literature: DCR graphs & declarative modelling", "preparation", "2026-09-01", "2026-09-28",
+        "#0e7490", "open", "DCR semantics, nesting, timed extensions, data-aware guards.");
+  addWp("WP-LR6", "Literature: legal formalisation & compliance by design", "preparation", "2026-09-14", "2026-10-05",
+        "#0d9488", "open", "Formalising legal norms, compliance by design, normative reasoning.");
+  addWp("WP-LR7", "Literature: process mining & conformance checking", "preparation", "2026-09-21", "2026-10-12",
+        "#047857", "open", "Process mining foundations and conformance checking over declarative models.");
+  addWp("WP-DCR", "DCR modelling in DCR Solutions", "preparation", "2026-09-21", "2026-10-19",
+        "#b45309", "open", "Building the model: phases, roles, provider spine, post-market block, Art. 25.");
+  addWp("WP-VERIF", "Legal verification of the model", "preparation", "2026-10-05", "2026-10-26",
+        "#a21caf", "open", "Article-by-article verification of the model against the Official Journal text.");
+  addWp("WP-DATA", "Data access & event log preparation", "preparation", "2026-09-07", "2026-10-26",
+        "#c2410c", "active", "Securing an event log: company contact or synthetic generation. Biggest schedule risk.");
+  addWp("WP-VALID", "Validation & conformance checking", "preparation", "2026-10-12", "2026-11-02",
+        "#4d7c0f", "open", "Replay of the event log against the model, deviation analysis.");
+  addWp("WP-WRITE", "Writing", "writing", "2026-09-28", "2026-11-19",
+        "#166534", "open", "Drafting all chapters to content-complete state.");
+  addWp("WP-FINAL", "Final polish & submission", "writing", "2026-11-09", "2026-11-19",
+        "#15803d", "open", "Formatting, references, consistency pass, submission.");
+  addWp("WP-DEF", "Feedback integration & defense prep", "writing", "2026-11-20", "2027-01-29",
+        "#334155", "open", "Buffer after the internal deadline: feedback incorporation and defense preparation.");
+
+  /* ---- milestones --------------------------------------------------- */
+  function addMs(title, date, type, dateUnknown, description) {
+    s.milestones.push({
+      id: uid(), title: title, date: date, type: type,
+      status: "open", dateUnknown: !!dateUnknown, description: description
+    });
+  }
+  addMs("Thesis content-complete (internal deadline)", "2026-11-19", "hard", false,
+        "Countdown anchor. Everything after this date is buffer for incorporating feedback only.");
+  addMs("Draft submission window opens", "2026-11-19", "soft", false,
+        "Official draft submission window runs until 10 Dec 2026.");
+  addMs("Final submission window opens", "2026-11-30", "soft", false,
+        "Official final submission window runs until 13 Dec 2026.");
+  addMs("Last day for final submission", "2026-12-13", "hard", false, "");
+  addMs("Defense", "2027-01-05", "hard", true,
+        "Exact date not yet known. Range: 5 Jan – 29 Jan 2027.");
+
+  /* ---- chapters ----------------------------------------------------- */
+  [
+    ["Introduction", 2000],
+    ["Regulatory background: the AI Act and high-risk systems", 6000],
+    ["Related work: DCR graphs and legal formalisation", 3500],
+    ["Methodology", 5000],
+    ["Modelling AI Act obligations as a DCR graph", 6000],
+    ["Validation: conformance checking", 5000],
+    ["Discussion & limitations", 3000],
+    ["Conclusion & outlook", 1500]
+  ].forEach(function (c, i) {
+    s.chapters.push({
+      id: uid(), title: c[0], targetWords: c[1], currentWords: 0,
+      status: "notStarted", order: i + 1
+    });
+  });
+
+  /* ---- global tags --------------------------------------------------- */
+  s.tags = [
+    "AI Act", "Annex III", "Art. 6 classification", "Operator roles", "Art. 25 reclassification",
+    "Compliance lifecycle", "Conformity assessment", "DCR semantics", "Timed DCR",
+    "Declarative modelling", "Legal formalisation", "Compliance by design", "Process mining",
+    "Conformance checking", "Event logs", "SMEs", "Regulatory uncertainty", "Methodology",
+    "Legal indeterminacy"
+  ];
+
+  /* ---- sample tasks -------------------------------------------------- */
+  function addTaskSeed(title, wpCode, status, priority, dueDate, isBlocker, tags) {
+    var o = {
+      id: uid(), title: title,
+      workPackageId: wp[wpCode] ? wp[wpCode].id : null,
+      status: status, priority: priority, dueDate: dueDate || "",
+      isBlocker: !!isBlocker, tags: tags || [], notes: [], attachments: [],
+      createdAt: t0, completedAt: status === "done" ? t0 : null
+    };
+    s.tasks.push(o);
+    pendingSampleIds.tasks.push(o.id);
+    return o;
+  }
+
+  /* WP-DCR: the actual modelling sequence, in build order */
+  addTaskSeed("Build Phase 0 + role routing (classification, include/exclude branching)",
+    "WP-DCR", "todo", "high", "", false, ["DCR semantics", "Art. 6 classification"]);
+  addTaskSeed("Build the provider spine backwards from CE marking: route determination → assessment → declaration of conformity → CE marking → registration → placing on market",
+    "WP-DCR", "backlog", "high", "", false, ["Conformity assessment"]);
+  addTaskSeed("Attach the Art. 9 / 10 / 11 blocks as conditions into the assessment convergence point",
+    "WP-DCR", "backlog", "medium", "", false, ["Compliance lifecycle"]);
+  addTaskSeed("Add Art. 12–15, 17, 40–42 as leaf events",
+    "WP-DCR", "backlog", "medium", "", false, ["Compliance lifecycle"]);
+  addTaskSeed("Build the post-market block including the feedback loop into risk management, then test that an accepting state is still reachable",
+    "WP-DCR", "backlog", "high", "", false, ["DCR semantics"]);
+  addTaskSeed("Build the Article 25 reclassification block and run it live (demo moment)",
+    "WP-DCR", "backlog", "high", "", false, ["Art. 25 reclassification"]);
+  addTaskSeed("Build the deployer sub-graph including the escalation chain to the provider",
+    "WP-DCR", "backlog", "medium", "", false, ["Operator roles"]);
+  addTaskSeed("Add importer, distributor and authorised representative",
+    "WP-DCR", "backlog", "medium", "", false, ["Operator roles"]);
+  addTaskSeed("Add the attestation and documentation nodes for the ten indeterminacy points last",
+    "WP-DCR", "backlog", "medium", "", false, ["Legal indeterminacy"]);
+
+  /* WP-VERIF: verification against the Official Journal text */
+  addTaskSeed("Verify Article 26 paragraph numbering against the OJ PDF (highest error risk)",
+    "WP-VERIF", "todo", "high", "", true, ["AI Act"]);
+  addTaskSeed("Verify Article 27(1) scope and the Annex III 5(b)/(c) cross-reference",
+    "WP-VERIF", "backlog", "medium", "", false, ["Annex III"]);
+  addTaskSeed("Verify the Article 49(1) exemption for Annex III point 2",
+    "WP-VERIF", "backlog", "medium", "", false, ["Annex III"]);
+  addTaskSeed("Verify Article 43(1) mapping to Annex III point 1 and the Annex VI / VII choice",
+    "WP-VERIF", "backlog", "medium", "", false, ["Conformity assessment"]);
+  addTaskSeed("Verify Article 73 deadlines (15 / 2 / 10 days) and what each is measured from",
+    "WP-VERIF", "backlog", "medium", "", false, ["Timed DCR"]);
+  addTaskSeed("Verify Annex IV point numbering",
+    "WP-VERIF", "backlog", "low", "", false, ["AI Act"]);
+  addTaskSeed("Verify Article 3(23) wording of “substantial modification”",
+    "WP-VERIF", "backlog", "medium", "", false, ["Art. 25 reclassification"]);
+  addTaskSeed("Check whether the Digital Omnibus changes the deadline structure",
+    "WP-VERIF", "backlog", "medium", "", false, ["AI Act"]);
+
+  /* Open decisions */
+  addTaskSeed("Decide the case boundary: one graph containing provider and deployer sub-graphs with the role controlling enablement, vs. strict separation with an external-actor placeholder",
+    "WP-DCR", "awaitingSupervisor", "high", "", false, ["Methodology", "DCR semantics"]);
+  addTaskSeed("Timed DCR: implement reporting deadlines as a deadline on the pending marking, or as a pure data annotation",
+    "WP-DCR", "awaitingSupervisor", "high", "", false, ["Timed DCR"]);
+
+  /* WP-DATA: biggest schedule risk */
+  addTaskSeed("Secure the event log data source (company contact or synthetic log)",
+    "WP-DATA", "inProgress", "high", "2026-09-15", true, ["Event logs"]);
+
+  /* ---- sample literature ---------------------------------------------- */
+  function addLitSeed(authors, year, title, source, type, status, relevance, wpCode) {
+    var o = {
+      id: uid(), authors: authors, year: year, title: title, source: source,
+      type: type, status: status, relevance: relevance, readBy: "",
+      tags: [], chapterId: null,
+      workPackageId: wp[wpCode] ? wp[wpCode].id : null,
+      excerpt: { keyClaim: "", methodology: "", relevanceToThesis: "", openQuestions: "" },
+      quotes: [], notes: [], attachments: []
+    };
+    s.literature.push(o);
+    pendingSampleIds.literature.push(o.id);
+    return o;
+  }
+  addLitSeed("European Union", "2024",
+    "Regulation (EU) 2024/1689 (AI Act), Official Journal text",
+    "Official Journal of the European Union, L, 12 July 2024",
+    "Legal text", "toRead", 5, "WP-LR2");
+  addLitSeed("Hildebrandt & Mukkamala", "2010",
+    "Declarative Event-Based Workflow as Distributed Dynamic Condition Response Graphs",
+    "PLACES 2010, EPTCS 69", "Paper", "toRead", 5, "WP-LR5");
+  addLitSeed("van der Aalst", "2016",
+    "Process Mining: Data Science in Action",
+    "Springer, 2nd edition", "Book", "backlog", 4, "WP-LR7");
+  addLitSeed("—", "—",
+    "Placeholder: conformance checking over declarative models",
+    "", "Paper", "backlog", 4, "WP-LR7");
+
+  return s;
+}
+
+/* =========================================================
+   Mutations
+   ========================================================= */
+function addTask(fields) {
+  var t = {
+    id: uid(),
+    title: fields.title,
+    workPackageId: fields.workPackageId || null,
+    status: fields.status,
+    priority: fields.priority,
+    dueDate: fields.dueDate || "",
+    isBlocker: !!fields.isBlocker,
+    tags: [],
+    notes: [],
+    attachments: [],
+    createdAt: today(),
+    completedAt: fields.status === "done" ? today() : null
+  };
+  state.tasks.push(t);
+  save();
+  return t;
+}
+
+function deleteTask(id) {
+  state.tasks = state.tasks.filter(function (t) { return t.id !== id; });
+  /* reference cleanup */
+  state.focusToday = state.focusToday.filter(function (fid) { return fid !== id; });
+  state.events.forEach(function (e) {
+    e.linkedTasks = (e.linkedTasks || []).filter(function (tid) { return tid !== id; });
+  });
+  state.meetings.forEach(function (m) {
+    (m.todos || []).forEach(function (td) { if (td.taskId === id) td.taskId = null; });
+  });
+  sampleIds.tasks = sampleIds.tasks.filter(function (sid) { return sid !== id; });
+  save();
+}
+
+function addLiterature(fields) {
+  var l = {
+    id: uid(),
+    authors: fields.authors || "",
+    year: fields.year || "",
+    title: fields.title,
+    source: fields.source || "",
+    type: fields.type,
+    status: fields.status,
+    relevance: Number(fields.relevance) || 3,
+    readBy: fields.readBy || "",
+    tags: [],
+    chapterId: null,
+    workPackageId: fields.workPackageId || null,
+    excerpt: { keyClaim: "", methodology: "", relevanceToThesis: "", openQuestions: "" },
+    quotes: [],
+    notes: [],
+    attachments: []
+  };
+  state.literature.push(l);
+  save();
+  return l;
+}
+
+function deleteLiterature(id) {
+  state.literature = state.literature.filter(function (l) { return l.id !== id; });
+  sampleIds.literature = sampleIds.literature.filter(function (sid) { return sid !== id; });
+  save();
+}
+
+function addEvent(fields) {
+  var e = {
+    id: uid(),
+    date: fields.date,
+    startTime: fields.startTime || "",
+    endTime: fields.endTime || "",
+    title: fields.title,
+    type: fields.type,
+    agenda: fields.agenda || "",
+    linkedTasks: []
+  };
+  state.events.push(e);
+  save();
+  return e;
+}
+
+function deleteEvent(id) {
+  state.events = state.events.filter(function (e) { return e.id !== id; });
+  save();
+}
+
+/* =========================================================
+   Export / Import / Clear sample data
+   ========================================================= */
+function exportState() {
+  var blob = new Blob([JSON.stringify(state, null, 2)], { type: "application/json" });
+  var url = URL.createObjectURL(blob);
+  var a = document.createElement("a");
+  a.href = url;
+  a.download = "thesis-tracker-backup-" + today() + ".json";
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  setTimeout(function () { URL.revokeObjectURL(url); }, 1000);
+}
+
+function downloadText(filename, text, mime) {
+  var blob = new Blob([text], { type: mime || "text/plain;charset=utf-8" });
+  var url = URL.createObjectURL(blob);
+  var a = document.createElement("a");
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  setTimeout(function () { URL.revokeObjectURL(url); }, 1000);
+}
+
+function quotesMarkdown() {
+  var buckets = {};
+  var total = 0;
+  var sources = {};
+  state.literature.forEach(function (l) {
+    (l.quotes || []).forEach(function (q) {
+      var key = q.chapterId || "__none__";
+      if (!buckets[key]) buckets[key] = [];
+      buckets[key].push({ lit: l, q: q });
+      total++;
+      sources[l.id] = true;
+    });
+  });
+  if (!total) return null;
+
+  var order = chaptersInOrder().map(function (c) {
+    return { key: c.id, heading: c.order + ". " + c.title };
+  });
+  order.push({ key: "__none__", heading: "Not assigned to a chapter" });
+
+  var out = ["# Quotes", "",
+    "_" + total + (total === 1 ? " quote" : " quotes") + " from " + Object.keys(sources).length +
+    " source" + (Object.keys(sources).length === 1 ? "" : "s") + " · exported " + formatDate(today()) + "_", ""];
+
+  order.forEach(function (grp) {
+    var list = buckets[grp.key];
+    if (!list || !list.length) return;
+    list.sort(function (a, b) {
+      var s = String(a.lit.authors || "").localeCompare(String(b.lit.authors || ""));
+      if (s !== 0) return s;
+      return (Number(a.q.page) || 0) - (Number(b.q.page) || 0);
+    });
+    out.push("## " + grp.heading, "");
+    list.forEach(function (x) {
+      var cite = citationOf(x.lit, x.q.page);
+      x.q.text.split("\n").forEach(function (line) { out.push("> " + line); });
+      out.push("");
+      out.push("— " + (cite || "no citation details") + (x.lit.source ? ". " + x.lit.source : ""));
+      out.push("");
+    });
+  });
+
+  return out.join("\n");
+}
+
+function exportQuotes() {
+  var md = quotesMarkdown();
+  if (!md) {
+    noticeDialog("No quotes yet", "Add quotes in a literature entry’s detail panel first — they are always attached to a source.");
+    return;
+  }
+  downloadText("thesis-tracker-quotes-" + today() + ".md", md, "text/markdown;charset=utf-8");
+}
+
+function validateImport(raw) {
+  if (!raw || typeof raw !== "object" || Array.isArray(raw)) return "the file does not contain a JSON object.";
+  if (typeof raw.schemaVersion !== "number") return "field 'schemaVersion' is missing or not a number.";
+  var required = ["workPackages","tasks","literature","milestones","events","meetings","chapters","tags","focusToday"];
+  for (var i = 0; i < required.length; i++) {
+    if (!Array.isArray(raw[required[i]])) return "field '" + required[i] + "' is missing or is not an array.";
+  }
+  if (!raw.meta || typeof raw.meta !== "object") return "field 'meta' is missing.";
+  return null;
+}
+
+function importFromFile(file) {
+  var reader = new FileReader();
+  reader.onload = function () {
+    var raw;
+    try { raw = JSON.parse(String(reader.result)); }
+    catch (e) { noticeDialog("Import failed", "The file is not valid JSON."); return; }
+
+    var problem = validateImport(raw);
+    if (problem) { noticeDialog("Import failed", "Schema check failed: " + problem); return; }
+
+    var summary = raw.tasks.length + " tasks, " + raw.literature.length + " literature entries, " +
+                  raw.workPackages.length + " work packages, " + raw.milestones.length + " milestones, " +
+                  raw.chapters.length + " chapters";
+    confirmDialog(
+      "Replace all data?",
+      "This replaces everything currently stored with the contents of the file (" + summary + "). This cannot be undone.",
+      "Replace"
+    ).then(function (ok) {
+      if (!ok) return;
+      state = migrate(raw);
+      sampleIds = { tasks: [], literature: [] }; /* imported items are no longer flagged as samples */
+      save();
+      renderAll();
+    });
+  };
+  reader.onerror = function () { noticeDialog("Import failed", "The file could not be read."); };
+  reader.readAsText(file);
+}
+
+function clearSampleData() {
+  var nT = state.tasks.filter(function (t) { return sampleIds.tasks.indexOf(t.id) !== -1; }).length;
+  var nL = state.literature.filter(function (l) { return sampleIds.literature.indexOf(l.id) !== -1; }).length;
+  if (nT + nL === 0) {
+    noticeDialog("Nothing to clear", "There are no sample tasks or sample literature entries left.");
+    return;
+  }
+  confirmDialog(
+    "Clear sample data?",
+    "This deletes " + nT + " sample tasks and " + nL + " sample literature entries. Work packages, milestones, chapters and tags are kept, and anything you created yourself is kept.",
+    "Clear"
+  ).then(function (ok) {
+    if (!ok) return;
+    sampleIds.tasks.slice().forEach(function (id) { deleteTask(id); });
+    sampleIds.literature.slice().forEach(function (id) { deleteLiterature(id); });
+    sampleIds = { tasks: [], literature: [] };
+    save();
+    renderAll();
+  });
+}
+
+/* =========================================================
+   Rendering
+   ========================================================= */
+var STATUS_LABEL = {
+  backlog: "Backlog", todo: "To do", inProgress: "In progress",
+  awaitingSupervisor: "Awaiting supervisor", review: "Review", done: "Done"
+};
+var LIT_STATUS_LABEL = {
+  backlog: "Backlog", toRead: "To read", read: "Read", excerpted: "Excerpted", discarded: "Discarded"
+};
+var PRIORITY_LABEL = { high: "High", medium: "Medium", low: "Low" };
+
+function wpById(id) {
+  return state.workPackages.filter(function (w) { return w.id === id; })[0] || null;
+}
+function chapterById(id) {
+  return state.chapters.filter(function (c) { return c.id === id; })[0] || null;
+}
+function chaptersInOrder() {
+  return state.chapters.slice().sort(function (a, b) { return (a.order || 0) - (b.order || 0); });
+}
+function findLit(id) {
+  return state.literature.filter(function (l) { return l.id === id; })[0] || null;
+}
+function wpChip(id) {
+  var w = wpById(id);
+  if (!w) return '<span class="chip"><span class="lbl">No package</span></span>';
+  return '<span class="chip"><span class="dot" style="background:' + esc(w.color) + '"></span><span class="lbl">' +
+         esc(w.title) + "</span></span>";
+}
+function dateChip(iso, settled) {
+  if (!isIsoDate(iso)) return '<span class="sub">&mdash;</span>';
+  if (settled) return '<span class="sub">' + formatDate(iso) + "</span>";
+  var diff = daysBetween(today(), iso);
+  if (diff < 0) return '<span class="chip overdue">' + formatDate(iso) + " &middot; overdue</span>";
+  if (diff === 0) return '<span class="chip due-today">' + formatDate(iso) + " &middot; today</span>";
+  return '<span class="sub">' + formatDate(iso) + "</span>";
+}
+function stat(k, v, sub) {
+  return "<div class='stat'><div class='k'>" + esc(k) + "</div><div class='v'>" + esc(String(v)) +
+         (sub ? " <small>" + esc(sub) + "</small>" : "") + "</div></div>";
+}
+function emptyBox(title, text) {
+  return "<div class='empty'><strong>" + esc(title) + "</strong>" + esc(text) + "</div>";
+}
+
+function renderFooter() {
+  var el = document.getElementById("savedLabel");
+  if (!state.meta.lastSaved) {
+    el.textContent = "Last saved: never";
+  } else {
+    var d = new Date(state.meta.lastSaved);
+    el.textContent = isNaN(d.getTime())
+      ? "Last saved: unknown"
+      : "Last saved: " + String(d.getHours()).padStart(2, "0") + ":" + String(d.getMinutes()).padStart(2, "0");
+  }
+  document.getElementById("schemaLabel").textContent = "Schema v" + state.schemaVersion;
+}
+
+/* ---------- daily line ---------- */
+/* Four sets. One line a day, chosen from the calendar date so both devices
+   agree and a reload does not reshuffle it. Deliberately the least important
+   thing on the page. */
+var LINES_PRODUCTIVITY = [
+  "Start with the part you can finish before lunch.",
+  "A rough page today beats a perfect page next week.",
+  "The task you keep rewriting on the list is the one to do first.",
+  "Close the tabs you are not reading.",
+  "Two quiet hours beat a whole day of interruptions.",
+  "Decide what today is for before you open anything.",
+  "Momentum is easier to keep than to restart.",
+  "If it takes under five minutes it does not belong on the board.",
+  "Working on the hard thing badly still counts as working on it.",
+  "Pick the next action, not the whole project.",
+  "The plan is allowed to change once you have started.",
+  "Finish one thing completely before opening the next.",
+  "Note where you stopped, so tomorrow starts faster.",
+  "Ambiguity is a task, not an excuse.",
+  "Your future self will not remember why you skipped this.",
+  "Small daily progress compounds faster than occasional heroics.",
+  "Do the boring administrative thing now and stop carrying it.",
+  "A blocked task is only blocked once you have named the blocker.",
+  "Stop improving the system and use it.",
+  "Estimate less, start sooner.",
+  "The board is not the work.",
+  "Write the question down before you go looking for the answer.",
+  "Protect the first hour of the day.",
+  "One clear decision removes ten small ones."
+];
+var LINES_THESIS = [
+  "Nobody has ever finished a literature review; they have only stopped.",
+  "The perfect citation you half remember does not exist.",
+  "Your supervisor has read worse drafts than this one.",
+  "Formatting the bibliography is not writing, however satisfying it feels.",
+  "Every thesis contains one chapter that was written twice.",
+  "The regulation will not get clearer on a fourth reading.",
+  "A contribution you can state in one sentence is a contribution.",
+  "Reading one more paper is the most respectable form of procrastination.",
+  "The methodology chapter always takes longer than the methodology.",
+  "Scope creep begins with the words “it would also be interesting to”.",
+  "Your model does not have to be right, it has to be defensible.",
+  "The gap in the literature is usually where the hard work is.",
+  "Nobody in the defence will ask about the appendix.",
+  "A draft you are embarrassed by is still a draft.",
+  "Legal texts were not written to be modelled, and yet here we are.",
+  "The word count grows more slowly than the reference list.",
+  "Two thousand words of yours beat twenty thousand of theirs.",
+  "You will understand your own footnote again in six weeks, probably.",
+  "Every open question you write down is one you cannot forget.",
+  "The thesis is a document with a deadline, not a monument.",
+  "Somewhere a regulator is also unsure what that article means.",
+  "Renaming the file version does not advance the argument.",
+  "The introduction gets written last, whatever the plan said.",
+  "Ten identifiable points of indeterminacy is a finding, not a failure."
+];
+var LINES_BEHIND = [
+  "Something slipped; take the oldest one and move it today.",
+  "An overdue date is information, not a verdict.",
+  "Reschedule what is genuinely later, then do what is genuinely now.",
+  "Clear one overdue item before starting anything new.",
+  "The blocker will not resolve itself; send the email.",
+  "Late work is still work; pick up where you left off.",
+  "Shorten the overdue list before it shortens your options."
+];
+var LINES_DONE = [
+  "Today’s list is done; stop while you are ahead.",
+  "That is today finished — leave the rest for tomorrow.",
+  "Done is done; write down where you stopped.",
+  "The board is lighter than it was this morning.",
+  "You planned it and you finished it, which is the whole method.",
+  "Nothing left for today, which is rather the point of picking three."
+];
+
+function dayOfYear(iso) {
+  var d = parseIso(iso);
+  return Math.round((d - new Date(d.getFullYear(), 0, 1)) / 86400000) + 1;
+}
+/* Deterministic per-date seed; never Math.random(), so the line is stable. */
+function dateSeed(iso) {
+  var h = 2166136261;
+  for (var i = 0; i < iso.length; i++) {
+    h ^= iso.charCodeAt(i);
+    h = (h * 16777619) >>> 0;
+  }
+  return h;
+}
+function pickLine(arr, iso) { return arr[dayOfYear(iso) % arr.length]; }
+
+function dailyLine() {
+  var t0 = today();
+
+  /* band 1: anything overdue, or an open blocker past its due date */
+  var behind = state.tasks.some(isOverdue) ||
+    state.tasks.some(function (t) {
+      return t.isBlocker && t.status !== "done" && isIsoDate(t.dueDate) && daysBetween(t0, t.dueDate) < 0;
+    });
+  if (behind) return pickLine(LINES_BEHIND, t0);
+
+  /* band 2: today's picks are finished. Ticking a focus task off removes it
+     from focusToday, so "all done" also covers the emptied-list case. */
+  var picked = state.focusToday.map(findTask).filter(Boolean);
+  var clearedToday = picked.length > 0 && picked.every(function (t) { return t.status === "done"; });
+  var emptiedToday = picked.length === 0 &&
+    state.tasks.some(function (t) { return t.status === "done" && t.completedAt === t0; });
+  if (clearedToday || emptiedToday) return pickLine(LINES_DONE, t0);
+
+  /* band 3: alternate between the two long sets, seeded by the date */
+  return pickLine(dateSeed(t0) % 2 === 0 ? LINES_PRODUCTIVITY : LINES_THESIS, t0);
+}
+
+/* ---------- dashboard ---------- */
+var focusOnly = false;
+
+function pctOf(done, all) { return all > 0 ? Math.round((done / all) * 100) : 0; }
+
+function barRow(label, valueText, pct, color, extraLab) {
+  return "<div class='prog-row'><div><div class='prog-lab'>" + label +
+      (extraLab || "") + "</div>" +
+      "<div class='bar'><i style='width:" + Math.max(0, Math.min(100, pct)) + "%;background:" +
+      (color || "var(--accent)") + "'></i></div></div>" +
+    "<div class='prog-val'>" + valueText + "</div></div>";
+}
+
+function renderCountdown() {
+  var t0 = today();
+  var d = daysBetween(t0, COUNTDOWN_ANCHOR);
+  var others = state.milestones.filter(function (m) { return m.date !== COUNTDOWN_ANCHOR || m.type !== "hard"; })
+    .sort(function (a, b) { return String(a.date).localeCompare(String(b.date)); });
+
+  var sub = others.map(function (m) {
+    return "<div class='cd-item'><b>" + esc(m.title) + "</b>" +
+      (m.dateUnknown ? "date not fixed" : esc(formatDate(m.date))) +
+      (m.description ? " &middot; " + esc(m.description) : "") + "</div>";
+  }).join("");
+
+  document.getElementById("dashCountdown").innerHTML =
+    "<div class='panel'><div class='countdown'>" +
+      "<span class='cd-num'>" + (d >= 0 ? d : Math.abs(d)) + "</span>" +
+      "<span class='cd-txt'>" + (d > 0 ? "days until " : d === 0 ? "days — today is " : "days since ") +
+      esc(formatDate(COUNTDOWN_ANCHOR)) + " &middot; thesis content-complete</span>" +
+    "</div><div class='cd-sub'>" +
+      (sub || "<div class='cd-item'>No further milestones recorded. Submission windows and the defense date belong here.</div>") +
+    "</div></div>";
+}
+
+function renderFocusTile() {
+  var ids = state.focusToday.slice(0, 3);
+  var rows = ids.map(function (id) {
+    var t = findTask(id);
+    if (!t) return "";
+    var w = wpById(t.workPackageId);
+    return "<div class='focus-row'>" +
+      "<input type='checkbox' data-focus-done='" + esc(t.id) + "' title='Complete this task'" +
+        (t.status === "done" ? " checked" : "") + ">" +
+      "<span class='focus-title' data-focus-open='" + esc(t.id) + "'>" + esc(t.title) + "</span>" +
+      (w ? "<span class='chip'><span class='dot' style='background:" + esc(w.color) + "'></span>" +
+           "<span class='lbl'>" + esc(wpShort(t.workPackageId)) + "</span></span>" : "") +
+      (t.dueDate ? "<span class='tl-when" + (isOverdue(t) ? " overdue" : "") + "'>" + esc(formatDate(t.dueDate)) + "</span>" : "") +
+      "<button type='button' class='btn tiny' data-focus-remove='" + esc(t.id) + "'>Remove</button></div>";
+  }).join("");
+
+  var candidates = state.tasks.filter(function (t) {
+    return t.status !== "done" && state.focusToday.indexOf(t.id) === -1;
+  }).sort(function (a, b) { return a.title.localeCompare(b.title); });
+
+  var picker = ids.length >= 3
+    ? "<div class='focus-slots'>All three slots are taken. Remove one to add another.</div>"
+    : "<div class='inline-form'><select id='focusPick' class='sel' style='flex:1;max-width:none'>" +
+        "<option value=''>Add a task to today…</option>" +
+        candidates.map(function (t) { return "<option value='" + esc(t.id) + "'>" + esc(t.title) + "</option>"; }).join("") +
+      "</select></div>";
+
+  document.getElementById("dashFocus").innerHTML =
+    "<div class='panel'><h2>Today &middot; <span class='sub'>" + ids.length + " of 3</span></h2>" +
+      (rows || "<div class='sub'>Nothing picked yet. Choose up to three tasks for today — from here, or with “Add to Today” in a task’s detail panel.</div>") +
+      picker + "</div>";
+}
+
+function tileRowHtml(kind, id, title, dateIso, settled, sub) {
+  var cls = "", when = dateIso ? formatDate(dateIso) : "";
+  if (dateIso && !settled) {
+    var diff = daysBetween(today(), dateIso);
+    if (diff < 0) cls = " overdue";
+    else if (diff === 0) cls = " due-today";
+  }
+  return "<div class='tile-row' data-go-kind='" + kind + "' data-go-id='" + esc(id) + "'>" +
+    "<span class='tl-title'>" + esc(title) + (sub ? " <span class='sub'>" + esc(sub) + "</span>" : "") + "</span>" +
+    (when ? "<span class='tl-when" + cls + "'>" + esc(when) + "</span>" : "") + "</div>";
+}
+
+function renderDashRest() {
+  var t0 = today();
+  var weekStart = startOfWeek(t0), weekEnd = dateAdd(weekStart, 6);
+
+  /* ---- preparation tracker ---- */
+  var prep = state.workPackages.filter(function (w) { return w.track === "preparation"; });
+  var prepDone = 0, prepAll = 0;
+  var prepRows = prep.map(function (w) {
+    var all = state.tasks.filter(function (t) { return t.workPackageId === w.id; });
+    var done = all.filter(function (t) { return t.status === "done"; }).length;
+    prepDone += done; prepAll += all.length;
+    return barRow(
+      "<span class='ci-dot' style='--wp:" + esc(w.color) + "'></span>" + esc(w.title),
+      all.length ? done + " / " + all.length + " · " + pctOf(done, all.length) + "%" : "no tasks",
+      pctOf(done, all.length), esc(w.color));
+  }).join("");
+
+  var prepPanel = "<div class='panel'><h2>Preparation</h2>" +
+    (prep.length ? prepRows : emptyBox("No preparation packages", "Work packages with track “preparation” appear here.")) +
+    (prep.length ? "<div class='prog-total'>" + barRow("Overall preparation",
+      prepAll ? prepDone + " / " + prepAll + " · " + pctOf(prepDone, prepAll) + "%" : "no tasks",
+      pctOf(prepDone, prepAll)) + "</div>" : "") + "</div>";
+
+  /* ---- writing tracker ---- */
+  var chapters = chaptersInOrder();
+  var curTotal = 0, tgtTotal = 0;
+  var chapRows = chapters.map(function (c) {
+    var cur = Number(c.currentWords) || 0, tgt = Number(c.targetWords) || 0;
+    curTotal += cur; tgtTotal += tgt;
+    return barRow(
+      "<span class='sub'>" + c.order + ".</span> " + esc(c.title),
+      "<input class='wordin' type='number' min='0' step='50' value='" + cur +
+        "' data-words='" + esc(c.id) + "'> <span class='sub' data-wordtarget='" + esc(c.id) + "'>/ " +
+        tgt.toLocaleString("en-GB") + "</span>",
+      pctOf(cur, tgt));
+  }).join("");
+
+  var writingPanel = "<div class='panel'><h2>Writing</h2>" +
+    (chapters.length ? chapRows : emptyBox("No chapters", "Chapters carry the word targets for this tracker.")) +
+    (chapters.length ? "<div class='prog-total' id='wordTotal'>" + barRow("Total words",
+      curTotal.toLocaleString("en-GB") + " / " + tgtTotal.toLocaleString("en-GB") + " · " + pctOf(curTotal, tgtTotal) + "%",
+      pctOf(curTotal, tgtTotal)) + "</div>" : "") + "</div>";
+
+  /* ---- due this week ---- */
+  var week = [];
+  state.tasks.forEach(function (t) {
+    if (t.status === "done" || !t.dueDate) return;
+    if (t.dueDate >= weekStart && t.dueDate <= weekEnd) week.push({ kind: "task", o: t, date: t.dueDate });
+  });
+  state.literature.forEach(function (l) {
+    if (litSettled(l) || !l.readBy) return;
+    if (l.readBy >= weekStart && l.readBy <= weekEnd) week.push({ kind: "literature", o: l, date: l.readBy });
+  });
+  week.sort(function (a, b) { return a.date.localeCompare(b.date); });
+
+  var weekPanel = "<div class='panel'><h2>Due this week</h2>" +
+    "<div class='sub' style='margin-bottom:6px'>" + esc(formatDate(weekStart)) + " &ndash; " + esc(formatDate(weekEnd)) + "</div>" +
+    (week.length
+      ? "<div class='tile-list'>" + week.map(function (x) {
+          return tileRowHtml(x.kind, x.o.id,
+            x.kind === "task" ? x.o.title : "Read: " + x.o.title, x.date, false,
+            x.kind === "task" ? wpShort(x.o.workPackageId) : "reading deadline");
+        }).join("") + "</div>"
+      : "<div class='sub'>Nothing due between now and Sunday.</div>") + "</div>";
+
+  /* ---- overdue ---- */
+  var over = [];
+  state.tasks.forEach(function (t) { if (isOverdue(t)) over.push({ kind: "task", o: t, date: t.dueDate }); });
+  state.literature.forEach(function (l) {
+    if (!litSettled(l) && l.readBy && daysBetween(t0, l.readBy) < 0) over.push({ kind: "literature", o: l, date: l.readBy });
+  });
+  over.sort(function (a, b) { return a.date.localeCompare(b.date); });
+
+  var overPanel = "<div class='panel" + (over.length ? " alarm" : "") + "'><h2>Overdue " +
+    (over.length ? "<span class='chip overdue'>" + over.length + "</span>" : "") + "</h2>" +
+    (over.length
+      ? "<div class='tile-list'>" + over.map(function (x) {
+          return tileRowHtml(x.kind, x.o.id,
+            x.kind === "task" ? x.o.title : "Read: " + x.o.title, x.date, false,
+            x.kind === "task" ? wpShort(x.o.workPackageId) : "reading deadline");
+        }).join("") + "</div>"
+      : "<div class='sub'>Nothing overdue.</div>") + "</div>";
+
+  /* ---- blockers ---- */
+  var blockers = state.tasks.filter(function (t) { return t.isBlocker; });
+  var blockPanel = "<div class='panel'><h2>Blockers " +
+    (blockers.length ? "<span class='chip blocker'>" + blockers.length + "</span>" : "") + "</h2>" +
+    (blockers.length
+      ? "<div class='tile-list'>" + blockers.map(function (t) {
+          return "<div class='tile-row'>" +
+            "<span class='tl-title' data-go-kind='task' data-go-id='" + esc(t.id) + "'>" + esc(t.title) + "</span>" +
+            "<span class='pill'>" + esc(STATUS_LABEL[t.status] || t.status) + "</span>" +
+            "<button type='button' class='btn tiny' data-unblock='" + esc(t.id) + "'>Clear flag</button></div>";
+        }).join("") + "</div>"
+      : "<div class='sub'>No blockers flagged.</div>") + "</div>";
+
+  /* ---- next supervisor meeting ---- */
+  var next = nextSupervisorEvent();
+  var meetPanel = "<div class='panel'><h2>Next supervisor meeting</h2>" +
+    (next
+      ? "<div class='countdown' style='gap:12px'><span class='cd-num' style='font-size:30px'>" +
+          daysBetween(t0, next.date) + "</span><span class='cd-txt' style='font-size:13px'>days &middot; " +
+          esc(formatDate(next.date)) + (next.startTime ? ", " + esc(next.startTime) : "") + "</span></div>" +
+        "<div class='sub' style='margin-top:8px'>" +
+          (next.agenda ? esc(next.agenda.slice(0, 220)) + (next.agenda.length > 220 ? "…" : "") : "No agenda points yet.") +
+        "</div>" +
+        "<div class='inline-form'><button type='button' class='btn' data-go-kind='event' data-go-id='" + esc(next.id) +
+          "'>Open event</button><button type='button' class='btn' id='goSupervisor'>Prepare in Supervisor tab</button></div>"
+      : "<div class='sub'>No upcoming meeting scheduled. Create a Supervisor event in the Schedule tab, or use the preparation block on the Supervisor tab.</div>" +
+        "<div class='inline-form'><button type='button' class='btn' id='goSupervisor'>Open Supervisor tab</button></div>") +
+    "</div>";
+
+  document.getElementById("dashRest").innerHTML =
+    "<div class='grid-2'>" + prepPanel + writingPanel + "</div>" +
+    "<div class='grid-3'>" + weekPanel + overPanel + blockPanel + "</div>" +
+    meetPanel;
+}
+
+function nextSupervisorEvent() {
+  var t0 = today();
+  return state.events.filter(function (e) { return e.type === "Supervisor" && e.date >= t0; })
+    .sort(function (a, b) {
+      var d = String(a.date).localeCompare(String(b.date));
+      return d !== 0 ? d : String(a.startTime || "").localeCompare(String(b.startTime || ""));
+    })[0] || null;
+}
+
+function renderDashboard() {
+  var open = state.tasks.filter(function (t) { return t.status !== "done"; }).length;
+  document.getElementById("dashMeta").textContent =
+    open + " open tasks · " + state.literature.length + " sources · " + state.workPackages.length + " work packages";
+  document.getElementById("dashLine").textContent = dailyLine();
+  renderCountdown();
+  renderFocusTile();
+  renderDashRest();
+  document.getElementById("focusOnly").checked = focusOnly;
+  document.getElementById("dashCountdown").classList.toggle("hidden", focusOnly);
+  document.getElementById("dashRest").classList.toggle("hidden", focusOnly);
+}
+
+function toggleFocusTask(id) {
+  var i = state.focusToday.indexOf(id);
+  if (i !== -1) state.focusToday.splice(i, 1);
+  else {
+    if (state.focusToday.length >= 3) {
+      noticeDialog("Today is full", "Focus mode holds at most three tasks. Remove one first.");
+      return false;
+    }
+    state.focusToday.push(id);
+  }
+  save();
+  renderDashboard();
+  return true;
+}
+/* ---------- board ---------- */
+
+var COLUMNS = [
+  ["backlog", "Backlog"], ["todo", "To Do"], ["inProgress", "In Progress"],
+  ["awaitingSupervisor", "Awaiting Supervisor"], ["review", "Review"], ["done", "Done"]
+];
+var NOTE_ICON = '<svg width="10" height="10" viewBox="0 0 12 12" aria-hidden="true" focusable="false">' +
+  '<path d="M1.6 2.5h8.8M1.6 6h8.8M1.6 9.5h5.4" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" fill="none"/></svg>';
+
+var filters = { wp: [], tags: [], priority: "", overdue: false, blockers: false };
+
+function filtersActive() {
+  return filters.wp.length > 0 || filters.tags.length > 0 || !!filters.priority ||
+         filters.overdue || filters.blockers;
+}
+function resetFilters() {
+  filters.wp = [];
+  filters.tags = [];
+  filters.priority = "";
+  filters.overdue = false;
+  filters.blockers = false;
+}
+function isOverdue(t) {
+  return isIsoDate(t.dueDate) && t.status !== "done" && daysBetween(today(), t.dueDate) < 0;
+}
+function taskMatches(t) {
+  if (filters.wp.length && filters.wp.indexOf(t.workPackageId || "__none__") === -1) return false;
+  if (filters.tags.length && !(t.tags || []).some(function (x) { return filters.tags.indexOf(x) !== -1; })) return false;
+  if (filters.priority && t.priority !== filters.priority) return false;
+  if (filters.overdue && !isOverdue(t)) return false;
+  if (filters.blockers && !t.isBlocker) return false;
+  return true;
+}
+function findTask(id) {
+  return state.tasks.filter(function (t) { return t.id === id; })[0] || null;
+}
+function wpShort(id) {
+  var w = wpById(id);
+  if (!w) return "No package";
+  var m = /^(WP-[A-Za-z0-9]+)/.exec(w.description || "");
+  return m ? m[1] : w.title;
+}
+var flashTaskId = null;
+function setTaskStatus(t, status) {
+  if (t.status !== status) flashTaskId = t.id;
+  t.status = status;
+  t.completedAt = status === "done" ? (t.completedAt || today()) : null;
+}
+
+function cardHtml(t) {
+  var w = wpById(t.workPackageId);
+  var due = "";
+  if (t.dueDate) {
+    var cls = "", suffix = "";
+    if (t.status !== "done") {
+      var diff = daysBetween(today(), t.dueDate);
+      if (diff < 0) { cls = " overdue"; suffix = " · overdue"; }
+      else if (diff === 0) { cls = " due-today"; suffix = " · today"; }
+    }
+    due = '<span class="card-date' + cls + '">' + formatDate(t.dueDate) + suffix + "</span>";
+  }
+  var tags = (t.tags || []).slice(0, 3).map(function (x) {
+    return '<span class="mini">' + esc(x) + "</span>";
+  }).join("");
+  if ((t.tags || []).length > 3) tags += '<span class="mini">+' + ((t.tags.length - 3)) + "</span>";
+
+  return '<article class="card' + (t.isBlocker ? " blocker" : "") + '" draggable="true" data-id="' + esc(t.id) + '"' +
+      (w ? ' style="--wp:' + esc(w.color) + '"' : "") + ' tabindex="0">' +
+    '<div class="card-title">' + esc(t.title) + "</div>" +
+    '<div class="card-row">' +
+      '<span class="prio p-' + esc(t.priority) + '" title="' + esc(PRIORITY_LABEL[t.priority] || t.priority) + ' priority"><i></i><i></i><i></i></span>' +
+      '<span class="card-wp">' + esc(wpShort(t.workPackageId)) + "</span>" +
+      (due ? '<span class="spacer" style="flex:1"></span>' + due : "") +
+    "</div>" +
+    ((t.isBlocker || tags || (t.notes || []).length)
+      ? '<div class="card-row">' +
+          (t.isBlocker ? '<span class="mini blocker">Blocker</span>' : "") + tags +
+          ((t.notes || []).length ? '<span class="note-flag" title="' + t.notes.length + ' notes">' + NOTE_ICON + t.notes.length + "</span>" : "") +
+        "</div>"
+      : "") +
+    "</article>";
+}
+
+function renderBoard() {
+  var shownByStatus = {};
+  var shown = 0;
+  COLUMNS.forEach(function (c) { shownByStatus[c[0]] = []; });
+  state.tasks.forEach(function (t) {
+    if (!shownByStatus[t.status]) return; /* unknown status: not crashing, just not shown */
+    if (!taskMatches(t)) return;
+    shownByStatus[t.status].push(t);
+    shown++;
+  });
+
+  var done = state.tasks.filter(function (t) { return t.status === "done"; }).length;
+  document.getElementById("taskCount").textContent =
+    state.tasks.length + (state.tasks.length === 1 ? " task" : " tasks") +
+    (filtersActive() ? " · " + shown + " shown" : "") + " · " + done + " done";
+
+  var notice = document.getElementById("boardNotice");
+  if (!state.tasks.length) {
+    notice.innerHTML = emptyBox("No tasks yet", "Press n or use “New task” to create one. Drag cards between columns to change their status.");
+  } else if (shown === 0) {
+    notice.innerHTML = emptyBox("Nothing matches the current filters", "All " + state.tasks.length + " tasks are hidden. Use “Reset filters” to see them again.");
+  } else {
+    notice.innerHTML = "";
+  }
+
+  document.getElementById("board").innerHTML = COLUMNS.map(function (c) {
+    var list = shownByStatus[c[0]].sort(function (a, b) {
+      if (!a.dueDate && !b.dueDate) return 0;
+      if (!a.dueDate) return 1;
+      if (!b.dueDate) return -1;
+      return a.dueDate.localeCompare(b.dueDate);
+    });
+    return '<section class="col" data-status="' + c[0] + '">' +
+      "<header><span class='col-title'>" + esc(c[1]) + "</span>" +
+      "<span class='col-count'>" + list.length + "</span></header>" +
+      '<div class="col-body" data-status="' + c[0] + '">' +
+        (list.length ? list.map(cardHtml).join("") : "<div class='col-empty'>Drop here</div>") +
+      "</div></section>";
+  }).join("");
+
+  /* fade the moved card back from the accent tint over 300ms */
+  if (flashTaskId) {
+    var moved = document.querySelector(".card[data-id='" + flashTaskId + "']");
+    flashTaskId = null;
+    if (moved) {
+      moved.classList.add("flash");
+      requestAnimationFrame(function () {
+        requestAnimationFrame(function () { moved.classList.remove("flash"); });
+      });
+    }
+  }
+
+  renderFilterUi();
+}
+
+/* ---------- shared multi-select control ---------- */
+function renderMsControl(rootSel, label, key, store, selected, items, emptyText) {
+  var root = document.querySelector(rootSel);
+  if (!root) return;
+  var btn = root.querySelector("[data-ms-toggle]");
+  btn.classList.toggle("on", selected.length > 0);
+  btn.innerHTML = esc(label) + (selected.length ? " (" + selected.length + ")" : "") +
+    ' <span class="caret">&#9662;</span>';
+  root.querySelector(".ms-pop").innerHTML = (items.length
+    ? items.map(function (it) {
+        var inner = it.plain
+          ? "<span class='pill'>" + esc(it.label) + "</span>"
+          : "<span class='chip'>" + (it.color ? "<span class='dot' style='background:" + esc(it.color) + "'></span>" : "") +
+            "<span class='lbl'>" + esc(it.label) + "</span></span>";
+        return "<label><input type='checkbox' data-ms='" + key + "' data-ms-store='" + store + "' value='" +
+          esc(it.value) + "'" + (selected.indexOf(it.value) !== -1 ? " checked" : "") + ">" + inner + "</label>";
+      }).join("")
+    : "<div class='ms-none'>" + esc(emptyText) + "</div>") +
+    "<div class='ms-foot'><button type='button' class='btn tiny' data-ms-clear='" + key +
+    "' data-ms-store='" + store + "'>Clear</button></div>";
+}
+
+/* ---------- board filter bar ---------- */
+function renderFilterUi() {
+  renderMsControl("#msWp", "Work package", "wp", "board", filters.wp,
+    state.workPackages.map(function (w) { return { value: w.id, label: w.title, color: w.color }; })
+      .concat([{ value: "__none__", label: "No package", color: null }]),
+    "No work packages defined.");
+
+  var usedTags = {};
+  state.tags.forEach(function (x) { usedTags[x] = true; });
+  state.tasks.forEach(function (t) { (t.tags || []).forEach(function (x) { usedTags[x] = true; }); });
+  renderMsControl("#msTag", "Tag", "tags", "board", filters.tags,
+    Object.keys(usedTags).sort(function (a, b) { return a.localeCompare(b); })
+      .map(function (x) { return { value: x, label: x, plain: true }; }),
+    "No tags defined.");
+
+  var pr = document.getElementById("fPriority");
+  pr.value = filters.priority;
+  pr.classList.toggle("on", !!filters.priority);
+  document.getElementById("fOverdue").checked = filters.overdue;
+  document.getElementById("fBlockers").checked = filters.blockers;
+}
+
+function closeAllPopovers() {
+  Array.prototype.forEach.call(document.querySelectorAll(".ms-pop"), function (p) { p.classList.add("hidden"); });
+}
+
+/* ---------- drag & drop ---------- */
+var dragId = null;
+var dropPh = document.createElement("div");
+dropPh.className = "drop-ph";
+
+function cleanupDrag() {
+  if (dropPh.parentNode) dropPh.parentNode.removeChild(dropPh);
+  Array.prototype.forEach.call(document.querySelectorAll(".card.dragging"), function (c) { c.classList.remove("dragging"); });
+  Array.prototype.forEach.call(document.querySelectorAll(".col.drag-over"), function (c) { c.classList.remove("drag-over"); });
+}
+
+/* ---------- detail slide-over (tasks and literature) ---------- */
+var panelKind = null;   /* "task" | "literature" */
+var panelId = null;
+
+function autoGrow(el) {
+  el.style.height = "auto";
+  el.style.height = Math.min(el.scrollHeight + 2, 460) + "px";
+}
+function formatStamp(iso) {
+  if (!iso) return "";
+  /* A bare "YYYY-MM-DD" is parsed as UTC midnight by new Date(), which renders
+     as the previous day in any timezone behind UTC. Format it as a plain date. */
+  if (isIsoDate(iso)) return formatDate(iso);
+  var d = new Date(iso);
+  if (isNaN(d.getTime())) return formatDate(iso);
+  return formatDate(isoOf(d)) + ", " + String(d.getHours()).padStart(2, "0") + ":" + String(d.getMinutes()).padStart(2, "0");
+}
+function isLinkable(url) {
+  return /^(https?:|file:|mailto:)/i.test(String(url || "").trim());
+}
+function copyText(text, btn) {
+  function done() {
+    if (!btn) return;
+    var old = btn.textContent;
+    btn.textContent = "Copied";
+    setTimeout(function () { btn.textContent = old; }, 1200);
+  }
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(text).then(done, function () { fallback(); });
+  } else { fallback(); }
+  function fallback() {
+    var ta = document.createElement("textarea");
+    ta.value = text;
+    ta.style.position = "fixed";
+    ta.style.opacity = "0";
+    document.body.appendChild(ta);
+    ta.select();
+    try { document.execCommand("copy"); done(); } catch (e) { /* nothing else to try */ }
+    document.body.removeChild(ta);
+  }
+}
+
+function openTaskPanel(id) { panelKind = "task"; panelId = id; renderPanel(); }
+function openLitPanel(id) { panelKind = "literature"; panelId = id; renderPanel(); }
+function openEventPanel(id) { panelKind = "event"; panelId = id; renderPanel(); }
+function panelObject() {
+  if (panelKind === "task") return findTask(panelId);
+  if (panelKind === "literature") return findLit(panelId);
+  if (panelKind === "event") return findEvent(panelId);
+  return null;
+}
+function closePanel() {
+  var root = document.getElementById("panelRoot");
+  var s = root.querySelector(".slide");
+  var b = root.querySelector(".slide-back");
+  panelKind = null;
+  panelId = null;
+  if (!s) { root.innerHTML = ""; return; }
+  s.classList.remove("open");
+  if (b) b.classList.remove("open");
+  setTimeout(function () { if (!panelId) root.innerHTML = ""; }, 190);
+}
+
+function renderPanel() {
+  var root = document.getElementById("panelRoot");
+  var obj = panelObject();
+  if (!obj) { root.innerHTML = ""; panelKind = null; panelId = null; return; }
+  if (panelKind === "task") renderTaskPanel(obj);
+  else if (panelKind === "event") renderEventPanel(obj);
+  else renderLitPanel(obj);
+  var wasOpen = !!root.querySelector(".slide.open");
+  if (!wasOpen) {
+    requestAnimationFrame(function () {
+      var s = root.querySelector(".slide");
+      var b = root.querySelector(".slide-back");
+      if (s) s.classList.add("open");
+      if (b) b.classList.add("open");
+    });
+  }
+}
+
+/* ---------- shared panel sections: tags, notes, attachments ---------- */
+function tagsSectionHtml(owner) {
+  var chips = (owner.tags || []).length
+    ? owner.tags.map(function (x) {
+        return "<span class='chip'><span class='lbl'>" + esc(x) + "</span>" +
+          "<button type='button' data-untag='" + esc(x) + "' title='Remove tag'>&times;</button></span>";
+      }).join("")
+    : "<span class='sub'>No tags yet.</span>";
+  return '<div class="slide-sec"><h4>Tags</h4><div class="tag-edit">' + chips + "</div>" +
+    '<form class="inline-form" id="pTagForm"><input id="pTagInput" list="pTagOptions" placeholder="Add a tag" autocomplete="off">' +
+    '<datalist id="pTagOptions">' + state.tags.map(function (x) {
+      return "<option value='" + esc(x) + "'></option>";
+    }).join("") + "</datalist>" +
+    '<button type="submit" class="btn">Add</button></form></div>';
+}
+
+function wireTags(root, owner, after) {
+  root.querySelector("#pTagForm").addEventListener("submit", function (e) {
+    e.preventDefault();
+    var v = root.querySelector("#pTagInput").value.trim();
+    if (!v) return;
+    if (owner.tags.indexOf(v) === -1) owner.tags.push(v);
+    if (state.tags.indexOf(v) === -1) state.tags.push(v);
+    after();
+    var inp = document.getElementById("pTagInput");
+    if (inp) inp.focus();
+  });
+  Array.prototype.forEach.call(root.querySelectorAll("[data-untag]"), function (b) {
+    b.addEventListener("click", function () {
+      var v = this.getAttribute("data-untag");
+      owner.tags = owner.tags.filter(function (x) { return x !== v; });
+      after();
+    });
+  });
+}
+
+function notesSectionHtml(owner) {
+  var list = (owner.notes || []).length
+    ? "<ul class='notes'>" + owner.notes.slice().reverse().map(function (n) {
+        return "<li class='note' data-note='" + esc(n.id) + "'>" +
+          "<div class='note-head'><span class='sub'>" + esc(formatStamp(n.createdAt)) + "</span>" +
+          "<button type='button' class='btn tiny' data-note-copy='" + esc(n.id) + "'>Copy</button>" +
+          "<button type='button' class='btn tiny danger' data-note-del='" + esc(n.id) + "'>Delete</button></div>" +
+          "<textarea data-note-text='" + esc(n.id) + "'>" + esc(n.text) + "</textarea></li>";
+      }).join("") + "</ul>"
+    : "<div class='sub' style='margin-top:8px'>No notes yet.</div>";
+  return '<div class="slide-sec"><h4>Notes</h4>' +
+    '<div class="f"><textarea id="pNoteNew" placeholder="Write a note. It is timestamped when you add it."></textarea></div>' +
+    '<div class="inline-form" style="justify-content:flex-end"><button type="button" class="btn primary" id="pNoteAdd">Add note</button></div>' +
+    list + "</div>";
+}
+
+function wireNotes(root, owner, after) {
+  var noteNew = root.querySelector("#pNoteNew");
+  autoGrow(noteNew);
+  noteNew.addEventListener("input", function () { autoGrow(this); });
+  root.querySelector("#pNoteAdd").addEventListener("click", function () {
+    var v = noteNew.value.trim();
+    if (!v) { noteNew.focus(); return; }
+    owner.notes.push({ id: uid(), text: v, createdAt: new Date().toISOString() });
+    after();
+  });
+  Array.prototype.forEach.call(root.querySelectorAll("[data-note-text]"), function (ta) {
+    autoGrow(ta);
+    ta.addEventListener("input", function () {
+      var id = this.getAttribute("data-note-text");
+      var n = owner.notes.filter(function (x) { return x.id === id; })[0];
+      if (n) { n.text = this.value; save(); }
+      autoGrow(this);
+    });
+  });
+  Array.prototype.forEach.call(root.querySelectorAll("[data-note-copy]"), function (b) {
+    b.addEventListener("click", function () {
+      var id = this.getAttribute("data-note-copy");
+      var n = owner.notes.filter(function (x) { return x.id === id; })[0];
+      if (n) copyText(n.text, this);
+    });
+  });
+  Array.prototype.forEach.call(root.querySelectorAll("[data-note-del]"), function (b) {
+    b.addEventListener("click", function () {
+      var id = this.getAttribute("data-note-del");
+      confirmDialog("Delete note?", "This note will be removed permanently.", "Delete").then(function (ok) {
+        if (!ok) return;
+        owner.notes = owner.notes.filter(function (x) { return x.id !== id; });
+        after();
+      });
+    });
+  });
+}
+
+function attachmentsSectionHtml(owner, scope) {
+  scope = scope || "p";
+  var list = (owner.attachments || []).length
+    ? owner.attachments.map(function (a) {
+        var link = isLinkable(a.url)
+          ? "<a class='att-url' href='" + esc(a.url) + "' target='_blank' rel='noopener noreferrer'>" + esc(a.url) + "</a>"
+          : "<span class='att-url sub' title='Local paths cannot be opened from the browser'>" + esc(a.url) + "</span>";
+        return "<div class='att'><span class='att-name'>" + esc(a.name || "Link") + "</span>" + link +
+          "<button type='button' class='btn tiny' data-att-copy='" + esc(a.id) + "'>Copy</button>" +
+          "<button type='button' class='btn tiny danger' data-att-del='" + esc(a.id) + "'>Delete</button></div>";
+      }).join("")
+    : "<div class='sub'>No attachments yet. Links only &mdash; paste a URL or a local file path.</div>";
+  return '<div class="slide-sec"><h4>Attachments</h4>' + list +
+    '<form class="inline-form" id="' + scope + 'AttForm">' +
+      '<input id="' + scope + 'AttName" placeholder="Name" style="flex:0 0 34%">' +
+      '<input id="' + scope + 'AttUrl" placeholder="URL or local path" required>' +
+      '<button type="submit" class="btn">Add</button></form></div>';
+}
+
+function wireAttachments(root, owner, after, scope) {
+  scope = scope || "p";
+  root.querySelector("#" + scope + "AttForm").addEventListener("submit", function (e) {
+    e.preventDefault();
+    var url = root.querySelector("#" + scope + "AttUrl").value.trim();
+    if (!url) return;
+    var name = root.querySelector("#" + scope + "AttName").value.trim();
+    owner.attachments.push({ id: uid(), name: name || url, url: url, addedAt: new Date().toISOString() });
+    after();
+    var inp = document.getElementById(scope + "AttName");
+    if (inp) inp.focus();
+  });
+  Array.prototype.forEach.call(root.querySelectorAll("[data-att-copy]"), function (b) {
+    b.addEventListener("click", function () {
+      var id = this.getAttribute("data-att-copy");
+      var a = owner.attachments.filter(function (x) { return x.id === id; })[0];
+      if (a) copyText(a.url, this);
+    });
+  });
+  Array.prototype.forEach.call(root.querySelectorAll("[data-att-del]"), function (b) {
+    b.addEventListener("click", function () {
+      var id = this.getAttribute("data-att-del");
+      var a = owner.attachments.filter(function (x) { return x.id === id; })[0];
+      confirmDialog("Delete attachment?", "“" + (a ? (a.name || a.url) : "This link") + "” will be removed.", "Delete")
+        .then(function (ok) {
+          if (!ok) return;
+          owner.attachments = owner.attachments.filter(function (x) { return x.id !== id; });
+          after();
+        });
+    });
+  });
+}
+
+/* ---------- task panel ---------- */
+function renderTaskPanel(t) {
+  var root = document.getElementById("panelRoot");
+  var openCls = root.querySelector(".slide.open") ? " open" : "";
+
+  var statusOptions = COLUMNS.map(function (c) {
+    return '<option value="' + c[0] + '"' + (t.status === c[0] ? " selected" : "") + ">" + esc(STATUS_LABEL[c[0]]) + "</option>";
+  }).join("");
+  var prioOptions = ["high","medium","low"].map(function (p) {
+    return '<option value="' + p + '"' + (t.priority === p ? " selected" : "") + ">" + PRIORITY_LABEL[p] + "</option>";
+  }).join("");
+  var wpOptions = '<option value="">No package</option>' + state.workPackages.map(function (w) {
+    return '<option value="' + esc(w.id) + '"' + (t.workPackageId === w.id ? " selected" : "") + ">" + esc(w.title) + "</option>";
+  }).join("");
+
+  root.innerHTML =
+    '<div class="slide-back' + openCls + '"></div>' +
+    '<aside class="slide' + openCls + '" role="dialog" aria-label="Task details">' +
+      "<header><h3>Task</h3>" +
+        "<button type='button' class='btn tiny' id='pFocus'>" +
+          (state.focusToday.indexOf(t.id) !== -1 ? "Remove from Today" : "Add to Today") + "</button>" +
+        "<button type='button' class='btn tiny danger' id='pDelete'>Delete</button>" +
+        "<button type='button' class='btn tiny' id='pClose'>Close</button></header>" +
+      '<div class="slide-body">' +
+        '<div class="slide-sec"><div class="f"><label for="pTitle">Title</label>' +
+          '<textarea id="pTitle" data-f="title">' + esc(t.title) + "</textarea></div></div>" +
+        '<div class="slide-sec"><div class="fgrid">' +
+          '<div class="f wide"><label for="pWp">Work package</label><select id="pWp" data-f="wp">' + wpOptions + "</select></div>" +
+          '<div class="f"><label for="pStatus">Status</label><select id="pStatus" data-f="status">' + statusOptions + "</select></div>" +
+          '<div class="f"><label for="pPrio">Priority</label><select id="pPrio" data-f="priority">' + prioOptions + "</select></div>" +
+          '<div class="f"><label for="pDue">Due date</label><input id="pDue" type="date" data-f="due" value="' + esc(t.dueDate || "") + '"></div>' +
+          '<div class="f"><label>Blocker</label><label class="check"><input type="checkbox" data-f="blocker"' +
+            (t.isBlocker ? " checked" : "") + "> Flag as blocker</label></div>" +
+        "</div></div>" +
+        tagsSectionHtml(t) +
+        notesSectionHtml(t) +
+        attachmentsSectionHtml(t) +
+        '<div class="meta-line">Created ' + esc(formatDate(t.createdAt) || "—") +
+          (t.completedAt ? " · completed " + esc(formatDate(t.completedAt)) : "") + "</div>" +
+      "</div></aside>";
+
+  wireTaskPanel(t);
+}
+
+function afterTaskEdit() {
+  save();
+  renderBoard();
+  renderSchedule();
+  renderSupervisor();
+  renderDashboard();
+}
+
+function wireTaskPanel(t) {
+  var root = document.getElementById("panelRoot");
+  var q = function (sel) { return root.querySelector(sel); };
+
+  root.querySelector(".slide-back").addEventListener("click", closePanel);
+  q("#pClose").addEventListener("click", closePanel);
+  q("#pDelete").addEventListener("click", function () {
+    confirmDialog("Delete task?", "“" + t.title + "” will be removed permanently, including its notes and attachments.", "Delete")
+      .then(function (ok) {
+        if (!ok) return;
+        deleteTask(t.id);
+        closePanel();
+        renderBoard();
+        renderDashboard();
+      });
+  });
+
+  var title = q("#pTitle");
+  autoGrow(title);
+  title.addEventListener("input", function () {
+    t.title = this.value;
+    autoGrow(this);
+    afterTaskEdit();
+  });
+
+  q("#pWp").addEventListener("change", function () { t.workPackageId = this.value || null; afterTaskEdit(); });
+  q("#pStatus").addEventListener("change", function () { setTaskStatus(t, this.value); afterTaskEdit(); renderPanel(); });
+  q("#pPrio").addEventListener("change", function () { t.priority = this.value; afterTaskEdit(); });
+  q("#pDue").addEventListener("change", function () { t.dueDate = this.value || ""; afterTaskEdit(); });
+  q('[data-f="blocker"]').addEventListener("change", function () { t.isBlocker = this.checked; afterTaskEdit(); });
+
+  q("#pFocus").addEventListener("click", function () {
+    if (toggleFocusTask(t.id)) renderPanel();
+  });
+
+  var after = function () { afterTaskEdit(); renderPanel(); };
+  wireTags(root, t, after);
+  wireNotes(root, t, after);
+  wireAttachments(root, t, after);
+}
+
+function newTask() {
+  activateTab("board");
+  var t = addTask({ title: "New task", workPackageId: null, status: "todo", priority: "medium", dueDate: "", isBlocker: false });
+  renderBoard();
+  renderDashboard();
+  openTaskPanel(t.id);
+  setTimeout(function () {
+    var el = document.getElementById("pTitle");
+    if (el) { el.focus(); el.select(); }
+  }, 80);
+}
+
+/* ---------- literature panel ---------- */
+function afterLitEdit() {
+  save();
+  renderLiterature();
+  renderSchedule();
+  renderDashboard();
+}
+
+function citationOf(l, page) {
+  var who = (l.authors || "").trim();
+  var yr = String(l.year || "").trim();
+  var head = [who, yr].filter(function (x) { return x && x !== "—"; }).join(" ");
+  var p = String(page == null ? "" : page).trim();
+  if (p) head = head ? head + ", p. " + p : "p. " + p;
+  return head;
+}
+
+function renderLitPanel(l) {
+  var root = document.getElementById("panelRoot");
+  var openCls = root.querySelector(".slide.open") ? " open" : "";
+
+  var typeOptions = ["Paper","Legal text","Book","Report","Other"].map(function (x) {
+    return '<option value="' + esc(x) + '"' + (l.type === x ? " selected" : "") + ">" + esc(x) + "</option>";
+  }).join("");
+  var statusOptions = ["backlog","toRead","read","excerpted","discarded"].map(function (x) {
+    return '<option value="' + x + '"' + (l.status === x ? " selected" : "") + ">" + esc(LIT_STATUS_LABEL[x]) + "</option>";
+  }).join("");
+  var relOptions = [5,4,3,2,1].map(function (n) {
+    return '<option value="' + n + '"' + (Number(l.relevance) === n ? " selected" : "") + ">" + n +
+      (n === 5 ? " — core" : n === 1 ? " — marginal" : "") + "</option>";
+  }).join("");
+  var wpOptions = '<option value="">No package</option>' + state.workPackages.map(function (w) {
+    return '<option value="' + esc(w.id) + '"' + (l.workPackageId === w.id ? " selected" : "") + ">" + esc(w.title) + "</option>";
+  }).join("");
+  var chapterOptions = '<option value="">No chapter</option>' + chaptersInOrder().map(function (c) {
+    return '<option value="' + esc(c.id) + '"' + (l.chapterId === c.id ? " selected" : "") + ">" + c.order + ". " + esc(c.title) + "</option>";
+  }).join("");
+  var quoteChapterOptions = '<option value="">No chapter</option>' + chaptersInOrder().map(function (c) {
+    return '<option value="' + esc(c.id) + '">' + c.order + ". " + esc(c.title) + "</option>";
+  }).join("");
+
+  var ex = l.excerpt || {};
+  var excerptFields = [
+    ["keyClaim", "Key claim"],
+    ["methodology", "Methodology"],
+    ["relevanceToThesis", "Relevance to the thesis"],
+    ["openQuestions", "Open questions"]
+  ].map(function (f) {
+    return '<div class="f" style="margin-bottom:9px"><label for="pEx-' + f[0] + '">' + f[1] + "</label>" +
+      '<textarea id="pEx-' + f[0] + '" data-ex="' + f[0] + '" style="min-height:76px">' + esc(ex[f[0]] || "") + "</textarea></div>";
+  }).join("");
+
+  var quotesHtml = (l.quotes || []).length
+    ? "<ul class='quotes'>" + l.quotes.slice().reverse().map(function (qt) {
+        var ch = chapterById(qt.chapterId);
+        return "<li class='quote' data-quote='" + esc(qt.id) + "'>" +
+          "<div class='quote-head'><span class='sub'>" +
+            (qt.page ? "p. " + esc(qt.page) : "no page") +
+            (ch ? " · " + esc(ch.title) : "") + "</span>" +
+          "<button type='button' class='btn tiny' data-quote-copy='" + esc(qt.id) + "'>Copy</button>" +
+          "<button type='button' class='btn tiny danger' data-quote-del='" + esc(qt.id) + "'>Delete</button></div>" +
+          "<div class='quote-text'>" + esc(qt.text) + "</div></li>";
+      }).join("") + "</ul>"
+    : "<div class='sub' style='margin-top:8px'>No quotes yet.</div>";
+
+  root.innerHTML =
+    '<div class="slide-back' + openCls + '"></div>' +
+    '<aside class="slide' + openCls + '" role="dialog" aria-label="Literature details">' +
+      "<header><h3>Literature</h3>" +
+        "<button type='button' class='btn tiny' id='pToBoard'>Add to board</button>" +
+        "<button type='button' class='btn tiny danger' id='pDelete'>Delete</button>" +
+        "<button type='button' class='btn tiny' id='pClose'>Close</button></header>" +
+      '<div class="slide-body">' +
+        '<div class="slide-sec"><div class="f"><label for="pTitle">Title</label>' +
+          '<textarea id="pTitle" data-f="title">' + esc(l.title) + "</textarea></div></div>" +
+        '<div class="slide-sec"><div class="fgrid">' +
+          '<div class="f"><label for="pAuthors">Authors</label><input id="pAuthors" data-f="authors" value="' + esc(l.authors || "") + '"></div>' +
+          '<div class="f"><label for="pYear">Year</label><input id="pYear" data-f="year" value="' + esc(l.year || "") + '"></div>' +
+          '<div class="f wide"><label for="pSource">Source</label><input id="pSource" data-f="source" value="' + esc(l.source || "") + '" placeholder="Journal, publisher, official gazette…"></div>' +
+          '<div class="f"><label for="pType">Type</label><select id="pType" data-f="type">' + typeOptions + "</select></div>" +
+          '<div class="f"><label for="pStatus">Status</label><select id="pStatus" data-f="status">' + statusOptions + "</select></div>" +
+          '<div class="f"><label for="pRel">Relevance</label><select id="pRel" data-f="relevance">' + relOptions + "</select></div>" +
+          '<div class="f"><label for="pReadBy">Read by</label><input id="pReadBy" type="date" data-f="readBy" value="' + esc(l.readBy || "") + '"></div>' +
+          '<div class="f wide"><label for="pWp">Work package</label><select id="pWp" data-f="wp">' + wpOptions + "</select></div>" +
+          '<div class="f wide"><label for="pChapter">Chapter</label><select id="pChapter" data-f="chapter">' + chapterOptions + "</select></div>" +
+        "</div></div>" +
+        '<div class="slide-sec"><h4>Excerpt</h4>' + excerptFields + "</div>" +
+        '<div class="slide-sec"><h4>Quotes</h4>' + quotesHtml +
+          '<form class="quote-form" id="pQuoteForm">' +
+            '<textarea id="pQuoteText" placeholder="Paste the quote here"></textarea>' +
+            '<input id="pQuotePage" placeholder="Page">' +
+            '<select id="pQuoteChapter" class="sel">' + quoteChapterOptions + "</select>" +
+            '<div class="qf-actions"><button type="submit" class="btn primary">Add quote</button></div>' +
+          "</form></div>" +
+        tagsSectionHtml(l) +
+        notesSectionHtml(l) +
+        attachmentsSectionHtml(l) +
+      "</div></aside>";
+
+  wireLitPanel(l);
+}
+
+function wireLitPanel(l) {
+  var root = document.getElementById("panelRoot");
+  var q = function (sel) { return root.querySelector(sel); };
+
+  root.querySelector(".slide-back").addEventListener("click", closePanel);
+  q("#pClose").addEventListener("click", closePanel);
+  q("#pDelete").addEventListener("click", function () {
+    confirmDialog("Delete literature entry?", "“" + l.title + "” will be removed permanently, including its excerpt, quotes, notes and attachments.", "Delete")
+      .then(function (ok) {
+        if (!ok) return;
+        deleteLiterature(l.id);
+        closePanel();
+        renderLiterature();
+        renderDashboard();
+      });
+  });
+  q("#pToBoard").addEventListener("click", function () {
+    var t = addTask({
+      title: "Read: " + l.title,
+      workPackageId: l.workPackageId || null,
+      status: "todo",
+      priority: "medium",
+      dueDate: l.readBy || "",
+      isBlocker: false
+    });
+    t.tags = (l.tags || []).slice();
+    save();
+    renderBoard();
+    renderDashboard();
+    noticeDialog("Added to the board", "“" + t.title + "” was created in To Do" +
+      (t.dueDate ? ", due " + formatDate(t.dueDate) : "") + ".");
+  });
+
+  var title = q("#pTitle");
+  autoGrow(title);
+  title.addEventListener("input", function () { l.title = this.value; autoGrow(this); afterLitEdit(); });
+
+  q("#pAuthors").addEventListener("input", function () { l.authors = this.value; afterLitEdit(); });
+  q("#pYear").addEventListener("input", function () { l.year = this.value; afterLitEdit(); });
+  q("#pSource").addEventListener("input", function () { l.source = this.value; afterLitEdit(); });
+  q("#pType").addEventListener("change", function () { l.type = this.value; afterLitEdit(); });
+  q("#pStatus").addEventListener("change", function () { l.status = this.value; afterLitEdit(); });
+  q("#pRel").addEventListener("change", function () { l.relevance = Number(this.value); afterLitEdit(); });
+  q("#pReadBy").addEventListener("change", function () { l.readBy = this.value || ""; afterLitEdit(); });
+  q("#pWp").addEventListener("change", function () { l.workPackageId = this.value || null; afterLitEdit(); });
+  q("#pChapter").addEventListener("change", function () { l.chapterId = this.value || null; afterLitEdit(); });
+
+  Array.prototype.forEach.call(root.querySelectorAll("[data-ex]"), function (ta) {
+    autoGrow(ta);
+    ta.addEventListener("input", function () {
+      l.excerpt[this.getAttribute("data-ex")] = this.value;
+      autoGrow(this);
+      save();
+      renderFooter();
+    });
+  });
+
+  /* quotes */
+  var qText = q("#pQuoteText");
+  autoGrow(qText);
+  qText.addEventListener("input", function () { autoGrow(this); });
+  q("#pQuoteForm").addEventListener("submit", function (e) {
+    e.preventDefault();
+    var text = qText.value.trim();
+    if (!text) { qText.focus(); return; }
+    l.quotes.push({
+      id: uid(), text: text,
+      page: q("#pQuotePage").value.trim(),
+      chapterId: q("#pQuoteChapter").value || null,
+      createdAt: new Date().toISOString()
+    });
+    afterLitEdit();
+    renderPanel();
+  });
+  Array.prototype.forEach.call(root.querySelectorAll("[data-quote-copy]"), function (b) {
+    b.addEventListener("click", function () {
+      var id = this.getAttribute("data-quote-copy");
+      var qt = l.quotes.filter(function (x) { return x.id === id; })[0];
+      if (!qt) return;
+      var cite = citationOf(l, qt.page);
+      copyText('"' + qt.text + '"' + (cite ? " (" + cite + ")" : ""), this);
+    });
+  });
+  Array.prototype.forEach.call(root.querySelectorAll("[data-quote-del]"), function (b) {
+    b.addEventListener("click", function () {
+      var id = this.getAttribute("data-quote-del");
+      confirmDialog("Delete quote?", "This quote will be removed permanently from this entry.", "Delete")
+        .then(function (ok) {
+          if (!ok) return;
+          l.quotes = l.quotes.filter(function (x) { return x.id !== id; });
+          afterLitEdit();
+          renderPanel();
+        });
+    });
+  });
+
+  var after = function () { afterLitEdit(); renderPanel(); };
+  wireTags(root, l, after);
+  wireNotes(root, l, after);
+  wireAttachments(root, l, after);
+}
+
+function newLiterature() {
+  activateTab("literature");
+  var l = addLiterature({
+    title: "New entry", authors: "", year: "", source: "",
+    type: "Paper", status: "toRead", relevance: 3, readBy: "", workPackageId: null
+  });
+  renderLiterature();
+  renderDashboard();
+  openLitPanel(l.id);
+  setTimeout(function () {
+    var el = document.getElementById("pTitle");
+    if (el) { el.focus(); el.select(); }
+  }, 80);
+}
+
+/* ---------- literature ---------- */
+var litFilters = { wp: [], tags: [], status: "", type: "", relevance: "", chapter: "" };
+var litSort = { key: "relevance", dir: "desc" };
+
+var LIT_COLUMNS = [
+  ["authors", "Authors", "width:140px"],
+  ["year", "Year", "width:52px"],
+  ["title", "Title", ""],
+  ["type", "Type", "width:86px"],
+  ["status", "Status", "width:92px"],
+  ["relevance", "Relev.", "width:70px"],
+  ["readBy", "Read by", "width:118px"],
+  ["tags", "Tags", "width:150px"],
+  ["chapter", "Chapter", "width:150px"]
+];
+var LIT_STATUS_ORDER = ["backlog", "toRead", "read", "excerpted", "discarded"];
+
+function litSettled(l) {
+  return l.status === "read" || l.status === "excerpted" || l.status === "discarded";
+}
+function litFiltersActive() {
+  return litFilters.wp.length > 0 || litFilters.tags.length > 0 || !!litFilters.status ||
+         !!litFilters.type || !!litFilters.relevance || !!litFilters.chapter;
+}
+function resetLitFilters() {
+  litFilters.wp = [];
+  litFilters.tags = [];
+  litFilters.status = "";
+  litFilters.type = "";
+  litFilters.relevance = "";
+  litFilters.chapter = "";
+}
+function litMatches(l) {
+  if (litFilters.wp.length && litFilters.wp.indexOf(l.workPackageId || "__none__") === -1) return false;
+  if (litFilters.tags.length && !(l.tags || []).some(function (x) { return litFilters.tags.indexOf(x) !== -1; })) return false;
+  if (litFilters.status && l.status !== litFilters.status) return false;
+  if (litFilters.type && l.type !== litFilters.type) return false;
+  if (litFilters.relevance && String(l.relevance) !== litFilters.relevance) return false;
+  if (litFilters.chapter && (l.chapterId || "__none__") !== litFilters.chapter) return false;
+  return true;
+}
+function litSortValue(l, key) {
+  switch (key) {
+    case "year": return l.year ? Number(String(l.year).replace(/[^0-9]/g, "")) || null : null;
+    case "relevance": return Number(l.relevance) || 0;
+    case "status": return LIT_STATUS_ORDER.indexOf(l.status);
+    case "readBy": return l.readBy || "";
+    case "tags": return (l.tags || []).join(", ").toLowerCase();
+    case "chapter":
+      var c = chapterById(l.chapterId);
+      return c ? c.order : null;
+    default: return String(l[key] || "").toLowerCase();
+  }
+}
+function litCompare(a, b) {
+  var va = litSortValue(a, litSort.key), vb = litSortValue(b, litSort.key);
+  var ea = va === null || va === undefined || va === "";
+  var eb = vb === null || vb === undefined || vb === "";
+  if (ea && eb) return 0;
+  if (ea) return 1;   /* empty values always last */
+  if (eb) return -1;
+  var r = (typeof va === "number" && typeof vb === "number") ? va - vb : String(va).localeCompare(String(vb));
+  return litSort.dir === "desc" ? -r : r;
+}
+function relDots(n) {
+  var rel = Math.max(0, Math.min(5, Number(n) || 0));
+  return "●".repeat(rel) + "<span style='color:var(--border-strong)'>" + "●".repeat(5 - rel) + "</span>";
+}
+
+function renderLitStats() {
+  var by = { backlog: 0, toRead: 0, read: 0, excerpted: 0, discarded: 0 };
+  state.literature.forEach(function (l) { if (by[l.status] !== undefined) by[l.status]++; });
+  var pool = state.literature.length - by.discarded;
+  var pct = pool > 0 ? Math.round((by.excerpted / pool) * 100) : 0;
+  document.getElementById("litStats").innerHTML =
+    stat("Backlog", by.backlog, "") +
+    stat("To read", by.toRead, "") +
+    stat("Read", by.read, "") +
+    stat("Excerpted", by.excerpted, "") +
+    stat("Excerpted", pct + "%", "of " + pool + " non-discarded");
+}
+
+function renderLiterature() {
+  renderLitStats();
+
+  var rows = state.literature.filter(litMatches).sort(litCompare);
+  document.getElementById("litCount").textContent =
+    state.literature.length + (state.literature.length === 1 ? " entry" : " entries") +
+    (litFiltersActive() ? " · " + rows.length + " shown" : "");
+
+  var notice = document.getElementById("litNotice");
+  if (!state.literature.length) {
+    notice.innerHTML = emptyBox("No literature yet", "Use “New entry” to add a source. Excerpts, quotes, notes and links live in the detail panel.");
+  } else if (!rows.length) {
+    notice.innerHTML = emptyBox("Nothing matches the current filters", "All " + state.literature.length + " entries are hidden. Use “Reset filters” to see them again.");
+  } else {
+    notice.innerHTML = "";
+  }
+
+  var head = LIT_COLUMNS.map(function (c) {
+    var sorted = litSort.key === c[0];
+    return "<th class='sortable" + (sorted ? " sorted" : "") + "' data-sort='" + c[0] + "'" +
+      (c[2] ? " style='" + c[2] + "'" : "") + ">" + esc(c[1]) +
+      (sorted ? "<span class='sort-ind'>" + (litSort.dir === "asc" ? "&#9650;" : "&#9660;") + "</span>" : "") + "</th>";
+  }).join("");
+
+  var body = rows.map(function (l) {
+    var isSample = sampleIds.literature.indexOf(l.id) !== -1;
+    var ch = chapterById(l.chapterId);
+    var tags = (l.tags || []).length
+      ? "<div class='cell-tags'>" + l.tags.map(function (x) { return "<span class='mini'>" + esc(x) + "</span>"; }).join("") + "</div>"
+      : "<span class='sub'>&mdash;</span>";
+    var marks = [];
+    if ((l.quotes || []).length) marks.push((l.quotes.length) + " q");
+    if ((l.notes || []).length) marks.push((l.notes.length) + " n");
+    if ((l.attachments || []).length) marks.push((l.attachments.length) + " a");
+    return "<tr class='rowlink' data-lit='" + esc(l.id) + "'>" +
+      "<td>" + esc(l.authors || "—") + "</td>" +
+      "<td class='sub'>" + esc(l.year || "—") + "</td>" +
+      "<td class='title-cell'>" + esc(l.title) +
+        (isSample ? " <span class='chip sample'>sample</span>" : "") +
+        (l.source ? "<div class='sub'>" + esc(l.source) + "</div>" : "") +
+        (marks.length ? "<div class='sub'>" + esc(marks.join(" · ")) + "</div>" : "") + "</td>" +
+      "<td><span class='pill'>" + esc(l.type) + "</span></td>" +
+      "<td><span class='pill'>" + esc(LIT_STATUS_LABEL[l.status] || l.status) + "</span></td>" +
+      "<td class='rel'>" + relDots(l.relevance) + "</td>" +
+      "<td>" + dateChip(l.readBy, litSettled(l)) + "</td>" +
+      "<td>" + tags + "</td>" +
+      "<td>" + (ch ? "<span class='pill'>" + ch.order + ". " + esc(ch.title) + "</span>" : "<span class='sub'>&mdash;</span>") + "</td>" +
+      "</tr>";
+  }).join("");
+
+  document.getElementById("litList").innerHTML = rows.length
+    ? "<table><thead><tr>" + head + "</tr></thead><tbody>" + body + "</tbody></table>"
+    : "";
+
+  renderLitFilterUi();
+}
+
+function renderLitFilterUi() {
+  renderMsControl("#msLitWp", "Work package", "wp", "lit", litFilters.wp,
+    state.workPackages.map(function (w) { return { value: w.id, label: w.title, color: w.color }; })
+      .concat([{ value: "__none__", label: "No package", color: null }]),
+    "No work packages defined.");
+
+  var used = {};
+  state.tags.forEach(function (x) { used[x] = true; });
+  state.literature.forEach(function (l) { (l.tags || []).forEach(function (x) { used[x] = true; }); });
+  renderMsControl("#msLitTag", "Tag", "tags", "lit", litFilters.tags,
+    Object.keys(used).sort(function (a, b) { return a.localeCompare(b); })
+      .map(function (x) { return { value: x, label: x, color: null, plain: true }; }),
+    "No tags defined.");
+
+  var chSel = document.getElementById("lfChapter");
+  chSel.innerHTML = '<option value="">Any chapter</option>' +
+    chaptersInOrder().map(function (c) {
+      return '<option value="' + esc(c.id) + '">' + c.order + ". " + esc(c.title) + "</option>";
+    }).join("") + '<option value="__none__">No chapter</option>';
+
+  [["lfStatus", "status"], ["lfType", "type"], ["lfRelevance", "relevance"], ["lfChapter", "chapter"]]
+    .forEach(function (p) {
+      var el = document.getElementById(p[0]);
+      el.value = litFilters[p[1]];
+      el.classList.toggle("on", !!litFilters[p[1]]);
+    });
+}
+
+/* =========================================================
+   Schedule
+   ========================================================= */
+var CAL_VIEW_KEY = "thesisTrackerCalView";
+var calView = "week";
+var calCursor = today();
+
+var EVENT_TYPES = ["Supervisor", "Work block", "Other"];
+var EVENT_COLOR = { "Supervisor": "var(--event-supervisor)", "Work block": "var(--event-work)", "Other": "var(--event-other)" };
+var WEEKDAYS = ["Monday","Tuesday","Wednesday","Thursday","Friday","Saturday","Sunday"];
+var WEEKDAYS_SHORT = ["Mon","Tue","Wed","Thu","Fri","Sat","Sun"];
+
+function loadCalView() {
+  try {
+    var v = localStorage.getItem(CAL_VIEW_KEY);
+    if (v === "day" || v === "week" || v === "month") calView = v;
+  } catch (e) { /* storage unavailable: keep the default */ }
+}
+function saveCalView() {
+  try { localStorage.setItem(CAL_VIEW_KEY, calView); } catch (e) { /* nothing to do */ }
+}
+
+function parseIso(iso) {
+  var p = String(iso).split("-").map(Number);
+  return new Date(p[0], p[1] - 1, p[2]);
+}
+function weekdayIndex(iso) { return (parseIso(iso).getDay() + 6) % 7; }  /* 0 = Monday */
+function startOfWeek(iso) { return dateAdd(iso, -weekdayIndex(iso)); }
+function startOfMonth(iso) { return String(iso).slice(0, 8) + "01"; }
+function addMonths(iso, n) {
+  var p = String(iso).split("-").map(Number);
+  var first = new Date(p[0], p[1] - 1 + n, 1);
+  var last = new Date(first.getFullYear(), first.getMonth() + 1, 0).getDate();
+  return isoOf(new Date(first.getFullYear(), first.getMonth(), Math.min(p[2], last)));
+}
+function monthLabel(iso) {
+  var p = String(iso).split("-");
+  var full = ["January","February","March","April","May","June","July","August","September","October","November","December"];
+  return full[Number(p[1]) - 1] + " " + p[0];
+}
+function timeToMin(t) {
+  if (!t) return null;
+  var p = String(t).split(":");
+  var h = Number(p[0]), m = Number(p[1] || 0);
+  if (isNaN(h)) return null;
+  return h * 60 + (isNaN(m) ? 0 : m);
+}
+function minToTime(m) {
+  m = Math.max(0, Math.min(24 * 60 - 1, m));
+  return String(Math.floor(m / 60)).padStart(2, "0") + ":" + String(m % 60).padStart(2, "0");
+}
+function findEvent(id) {
+  return state.events.filter(function (e) { return e.id === id; })[0] || null;
+}
+
+/* one reader, used by all three views */
+function itemsOn(iso) {
+  var out = [];
+  state.milestones.filter(function (m) { return m.date === iso; }).forEach(function (m) {
+    out.push({ kind: "milestone", id: m.id, title: m.title, ms: m });
+  });
+  state.events.filter(function (e) { return e.date === iso; })
+    .sort(function (a, b) { return String(a.startTime || "99").localeCompare(String(b.startTime || "99")); })
+    .forEach(function (e) {
+      out.push({ kind: "event", id: e.id, title: e.title, time: e.startTime || "",
+                 color: EVENT_COLOR[e.type] || EVENT_COLOR.Other, ev: e });
+    });
+  state.tasks.filter(function (t) { return t.dueDate === iso; }).forEach(function (t) {
+    out.push({ kind: "task", id: t.id, title: t.title, color: (wpById(t.workPackageId) || {}).color, task: t });
+  });
+  state.literature.filter(function (l) { return l.readBy === iso; }).forEach(function (l) {
+    out.push({ kind: "literature", id: l.id, title: "Read: " + l.title,
+               color: (wpById(l.workPackageId) || {}).color, lit: l });
+  });
+  return out;
+}
+
+function calItemHtml(it) {
+  if (it.kind === "milestone") {
+    return "<div class='ci ci-ms " + (it.ms.type === "hard" ? "hard" : "soft") + "' title='" + esc(it.title) + "'>" +
+      "<span class='ci-t'>" + esc(it.title) + "</span>" +
+      (it.ms.dateUnknown ? "<span class='ci-time'>not fixed</span>" : "") + "</div>";
+  }
+  if (it.kind === "event") {
+    return "<div class='ci ci-event' style='background:" + esc(it.color) + "' data-ci-kind='event' data-ci-id='" +
+      esc(it.id) + "' title='" + esc(it.title) + "'>" +
+      (it.time ? "<span class='ci-time'>" + esc(it.time) + "</span>" : "") +
+      "<span class='ci-t'>" + esc(it.title) + "</span></div>";
+  }
+  var marker = it.kind === "task" ? "<span class='ci-dot'></span>" : "<span class='ci-ring'></span>";
+  return "<div class='ci ci-" + (it.kind === "task" ? "task" : "lit") + "' style='--wp:" +
+    esc(it.color || "var(--border-strong)") + "' data-ci-kind='" + it.kind + "' data-ci-id='" + esc(it.id) +
+    "' title='" + esc(it.title) + "'>" + marker + "<span class='ci-t'>" + esc(it.title) + "</span></div>";
+}
+
+/* ---------- month ---------- */
+function monthViewHtml(cursor) {
+  var first = startOfMonth(cursor);
+  var gridStart = startOfWeek(first);
+  var month = String(first).slice(0, 7);
+  var t0 = today();
+  var cells = "";
+  for (var i = 0; i < 42; i++) {
+    var d = dateAdd(gridStart, i);
+    var items = itemsOn(d);
+    var shown = items.slice(0, 3);
+    var rest = items.length - shown.length;
+    cells += "<div class='mcell" + (String(d).slice(0, 7) === month ? "" : " out") +
+      (d === t0 ? " today" : "") + "' data-day='" + d + "'>" +
+      "<span class='mnum'>" + Number(String(d).slice(8)) + "</span>" +
+      shown.map(calItemHtml).join("") +
+      (rest > 0 ? "<span class='more' data-more='" + d + "'>+" + rest + " more</span>" : "") +
+      "</div>";
+  }
+  return "<div class='month'>" +
+    WEEKDAYS_SHORT.map(function (w) { return "<div class='dow'>" + w + "</div>"; }).join("") +
+    cells + "</div>";
+}
+
+/* ---------- week ---------- */
+function weekViewHtml(cursor) {
+  var start = startOfWeek(cursor);
+  var t0 = today();
+  var cols = "";
+  for (var i = 0; i < 7; i++) {
+    var d = dateAdd(start, i);
+    var items = itemsOn(d);
+    cols += "<div class='wcol" + (d === t0 ? " today" : "") + "'>" +
+      "<header>" + WEEKDAYS_SHORT[i] + " <b>" + Number(String(d).slice(8)) + "</b> " +
+      MONTHS[Number(String(d).slice(5, 7)) - 1] + "</header>" +
+      "<div class='wbody' data-newday='" + d + "'>" +
+        (items.length ? items.map(calItemHtml).join("") : "<div class='wempty'>&mdash;</div>") +
+      "</div></div>";
+  }
+  return "<div class='week'>" + cols + "</div>";
+}
+
+/* ---------- day ---------- */
+function layoutDayEvents(list) {
+  var res = [], cluster = [], clusterEnd = -1;
+  function flush() {
+    if (!cluster.length) return;
+    var colEnds = [];
+    cluster.forEach(function (it) {
+      var c = 0;
+      while (colEnds[c] !== undefined && colEnds[c] > it.start) c++;
+      colEnds[c] = it.end;
+      it.col = c;
+    });
+    cluster.forEach(function (it) { it.cols = colEnds.length; });
+    res = res.concat(cluster);
+    cluster = [];
+  }
+  list.forEach(function (it) {
+    if (cluster.length && it.start >= clusterEnd) { flush(); clusterEnd = -1; }
+    cluster.push(it);
+    clusterEnd = Math.max(clusterEnd, it.end);
+  });
+  flush();
+  return res;
+}
+
+function dayViewHtml(iso) {
+  var items = itemsOn(iso);
+  var timed = [];
+  var allDay = [];
+  items.forEach(function (it) {
+    if (it.kind === "event" && timeToMin(it.ev.startTime) !== null) timed.push(it);
+    else allDay.push(it);
+  });
+
+  var ROW = 40, fromH = 8, toH = 20;
+  timed.forEach(function (it) {
+    var s = timeToMin(it.ev.startTime);
+    var e = timeToMin(it.ev.endTime);
+    if (e === null || e <= s) e = s + 60;
+    fromH = Math.min(fromH, Math.floor(s / 60));
+    toH = Math.max(toH, Math.ceil(e / 60));
+  });
+  fromH = Math.max(0, fromH);
+  toH = Math.min(24, Math.max(toH, fromH + 4));
+
+  var rows = "";
+  for (var h = fromH; h < toH; h++) {
+    rows += "<div class='hrow'><div class='hlabel'>" + String(h).padStart(2, "0") + ":00</div>" +
+      "<div class='hslot' data-newslot='" + iso + "' data-hour='" + h + "'></div></div>";
+  }
+
+  var laid = layoutDayEvents(timed.map(function (it) {
+    var s = timeToMin(it.ev.startTime);
+    var e = timeToMin(it.ev.endTime);
+    if (e === null || e <= s) e = s + 60;
+    return { it: it, start: s, end: e };
+  }).sort(function (a, b) { return a.start - b.start; }));
+
+  var blocks = laid.map(function (b) {
+    var top = ((b.start - fromH * 60) / 60) * ROW;
+    var height = Math.max(20, ((b.end - b.start) / 60) * ROW - 2);
+    var w = 100 / b.cols;
+    return "<div class='evblock' style='top:" + top + "px;height:" + height + "px;left:" + (b.col * w) +
+      "%;width:calc(" + w + "% - 4px);background:" + esc(b.it.color) + "' data-ci-kind='event' data-ci-id='" +
+      esc(b.it.id) + "'><div class='t'>" + esc(b.it.title) + "</div><div class='h'>" +
+      esc(b.it.ev.startTime || "") + (b.it.ev.endTime ? "&ndash;" + esc(b.it.ev.endTime) : "") + "</div></div>";
+  }).join("");
+
+  var agenda = items.length
+    ? items.map(function (it) {
+        var when = it.kind === "event" && it.ev.startTime ? it.ev.startTime
+          : it.kind === "milestone" ? "&mdash;" : "all day";
+        var sub = it.kind === "event"
+          ? (it.ev.agenda ? esc(it.ev.agenda) : "<span class='sub'>No agenda noted.</span>") +
+            ((it.ev.linkedTasks || []).length ? " <span class='pill'>" + it.ev.linkedTasks.length + " linked</span>" : "")
+          : it.kind === "task" ? "<span class='sub'>Task due &middot; " + esc(wpShort(it.task.workPackageId)) + "</span>"
+          : it.kind === "literature" ? "<span class='sub'>Reading deadline &middot; " + esc(it.lit.authors || "—") + "</span>"
+          : "<span class='sub'>Milestone &middot; " + esc(it.ms.type) + (it.ms.dateUnknown ? " &middot; date not fixed" : "") + "</span>";
+        var clickable = it.kind !== "milestone";
+        return "<div class='agenda-item" + (clickable ? "" : " static") + "'" +
+          (clickable ? " data-ci-kind='" + it.kind + "' data-ci-id='" + esc(it.id) + "'" : "") + ">" +
+          "<div class='ag-when'>" + when + "</div>" +
+          "<div class='ag-main'><div class='ag-title'>" + esc(it.title) + "</div><div class='sub'>" + sub + "</div></div></div>";
+      }).join("")
+    : "<div class='sub'>Nothing scheduled. Click an hour to add an event.</div>";
+
+  return "<div class='dayview'><div>" +
+      "<div class='allday'><h5 class='subhead'>All day &middot; due dates, deadlines, milestones</h5>" +
+        (allDay.length ? allDay.map(calItemHtml).join("") : "<span class='sub'>Nothing due.</span>") +
+      "</div>" +
+      "<div class='hours'>" + rows + "<div class='evlayer'>" + blocks + "</div></div>" +
+    "</div>" +
+    "<div class='agenda'><h5 class='subhead'>Agenda &middot; " + esc(formatDate(iso)) + "</h5>" + agenda + "</div></div>";
+}
+
+/* ---------- timeline ---------- */
+function renderTimeline() {
+  var el = document.getElementById("msTimeline");
+  var ms = state.milestones.filter(function (m) { return !!m.date; })
+    .sort(function (a, b) { return String(a.date).localeCompare(String(b.date)); });
+  if (!ms.length) {
+    el.innerHTML = emptyBox("No milestones", "Milestones from the data model appear here as a timeline up to the defense.");
+    return;
+  }
+  var t0 = today();
+  var start = ms[0].date < t0 ? ms[0].date : t0;
+  var end = ms[ms.length - 1].date;
+  var span = daysBetween(start, end);
+  if (span <= 0) { start = ms[0].date; end = dateAdd(start, 1); span = 1; }
+
+  function pct(iso) {
+    var v = daysBetween(start, iso) / span;
+    return 8 + Math.max(0, Math.min(1, v)) * 84;
+  }
+
+  /* four label lanes above and below the axis; a milestone takes the first lane
+     whose previous label is far enough away, so close dates never collide */
+  var LANES = [
+    { pos: "bottom:138px", conn: "top:112px;height:18px" },
+    { pos: "top:148px",    conn: "top:130px;height:18px" },
+    { pos: "bottom:186px", conn: "top:64px;height:66px" },
+    { pos: "top:196px",    conn: "top:130px;height:66px" }
+  ];
+  var MIN_GAP = 13;   /* percent of the axis, slightly wider than a label */
+  var lastX = [-999, -999, -999, -999];
+
+  var pts = ms.map(function (m) {
+    var x = pct(m.date);
+    var lane = 0;
+    while (lane < LANES.length && x - lastX[lane] < MIN_GAP) lane++;
+    if (lane === LANES.length) lane = 0;
+    lastX[lane] = x;
+    var cls = m.dateUnknown ? "unknown" : (m.type === "hard" ? "hard" : "soft");
+    return "<div class='tl-pt " + cls + "' style='left:" + x + "%' title='" + esc(m.title) + "'></div>" +
+      "<div class='tl-conn" + (m.dateUnknown ? " dashed" : "") + "' style='left:" + x + "%;" + LANES[lane].conn + "'></div>" +
+      "<div class='tl-lab' style='left:" + x + "%;" + LANES[lane].pos + "'>" +
+        "<div class='d'>" + (m.dateUnknown ? "date not fixed" : esc(formatDate(m.date))) + "</div>" +
+        "<div class='t'>" + esc(m.title) + "</div></div>";
+  }).join("");
+
+  var nowX = pct(t0);
+  var nowMarker = (t0 >= start && t0 <= end)
+    ? "<div class='tl-now' style='left:" + nowX + "%'></div><div class='tl-now-lab' style='left:" + nowX + "%'>Today</div>"
+    : "";
+
+  el.innerHTML = "<div class='tl'><div class='tl-axis'></div>" + nowMarker + pts + "</div>" +
+    "<div class='sub'>" + esc(formatDate(start)) + " &ndash; " + esc(formatDate(end)) +
+    " &middot; dashed marker = date not fixed yet</div>";
+}
+
+/* ---------- schedule render ---------- */
+function calPeriodLabel() {
+  if (calView === "day") return WEEKDAYS[weekdayIndex(calCursor)] + ", " + formatDate(calCursor);
+  if (calView === "week") {
+    var s = startOfWeek(calCursor), e = dateAdd(s, 6);
+    return formatDate(s) + " – " + formatDate(e);
+  }
+  return monthLabel(calCursor);
+}
+
+function renderLegend() {
+  document.getElementById("calLegend").innerHTML =
+    EVENT_TYPES.map(function (t) {
+      return "<span class='k'><span class='sw' style='background:" + EVENT_COLOR[t] + "'></span>" + esc(t) + "</span>";
+    }).join("") +
+    "<span class='k'><span class='ci-dot' style='--wp:var(--text-muted)'></span>Task due</span>" +
+    "<span class='k'><span class='ci-ring' style='--wp:var(--text-muted)'></span>Reading deadline</span>" +
+    "<span class='k'><span class='sw' style='background:var(--surface-sunken);border-left:3px solid var(--text)'></span>Milestone</span>";
+}
+
+function renderSchedule() {
+  var seg = document.getElementById("calSeg");
+  Array.prototype.forEach.call(seg.querySelectorAll("button"), function (b) {
+    b.classList.toggle("active", b.getAttribute("data-calview") === calView);
+  });
+  document.getElementById("calLabel").textContent = calPeriodLabel();
+
+  /* count what is in the visible period, so an empty week or month says why */
+  var from, days;
+  if (calView === "day") { from = calCursor; days = 1; }
+  else if (calView === "week") { from = startOfWeek(calCursor); days = 7; }
+  else { from = startOfWeek(startOfMonth(calCursor)); days = 42; }
+  var count = 0;
+  for (var i = 0; i < days; i++) count += itemsOn(dateAdd(from, i)).length;
+
+  var notice = document.getElementById("calNotice");
+  if (count > 0) {
+    notice.innerHTML = "";
+  } else if (!state.events.length && !state.milestones.length &&
+             !state.tasks.some(function (t) { return t.dueDate; }) &&
+             !state.literature.some(function (l) { return l.readBy; })) {
+    notice.innerHTML = emptyBox("The calendar is empty",
+      "It fills itself: give tasks a due date on the board, sources a reading deadline in Literature, and add events here with “New event”.");
+  } else {
+    notice.innerHTML = emptyBox(calView === "day" ? "Nothing on this day" : "Nothing in this " + calView,
+      "Use ◀ ▶ or “Today” to move, or click " +
+      (calView === "month" ? "a day to open it" : calView === "week" ? "a day column to add an event" : "an hour to add an event") + ".");
+  }
+
+  var body = document.getElementById("calBody");
+  if (calView === "day") body.innerHTML = dayViewHtml(calCursor);
+  else if (calView === "week") body.innerHTML = weekViewHtml(calCursor);
+  else body.innerHTML = monthViewHtml(calCursor);
+  renderLegend();
+  renderTimeline();
+}
+
+function calStep(dir) {
+  if (calView === "day") calCursor = dateAdd(calCursor, dir);
+  else if (calView === "week") calCursor = dateAdd(calCursor, dir * 7);
+  else calCursor = addMonths(calCursor, dir);
+  renderSchedule();
+}
+function setCalView(v) {
+  calView = v;
+  saveCalView();
+  renderSchedule();
+}
+
+/* ---------- event panel ---------- */
+function afterEventEdit() {
+  save();
+  renderSchedule();
+  renderDashboard();
+}
+
+function newEvent(iso, hour) {
+  var start = hour === undefined || hour === null ? "09:00" : minToTime(hour * 60);
+  var e = addEvent({
+    date: iso || calCursor,
+    startTime: start,
+    endTime: minToTime(timeToMin(start) + 60),
+    title: "New event",
+    type: "Work block"
+  });
+  renderSchedule();
+  openEventPanel(e.id);
+  setTimeout(function () {
+    var el = document.getElementById("pTitle");
+    if (el) { el.focus(); el.select(); }
+  }, 80);
+}
+
+function renderEventPanel(ev) {
+  var root = document.getElementById("panelRoot");
+  var openCls = root.querySelector(".slide.open") ? " open" : "";
+
+  var typeOptions = EVENT_TYPES.map(function (x) {
+    return '<option value="' + esc(x) + '"' + (ev.type === x ? " selected" : "") + ">" + esc(x) + "</option>";
+  }).join("");
+
+  var linked = (ev.linkedTasks || []).map(function (id) {
+    var t = findTask(id);
+    if (!t) return "";
+    return "<span class='chip'><span class='dot' style='background:" +
+      esc((wpById(t.workPackageId) || {}).color || "var(--border-strong)") + "'></span>" +
+      "<span class='lbl' data-open-task='" + esc(t.id) + "'>" + esc(t.title) + "</span>" +
+      "<button type='button' data-unlink='" + esc(t.id) + "' title='Unlink'>&times;</button></span>";
+  }).join("");
+  if (!linked) linked = "<span class='sub'>No tasks linked.</span>";
+
+  var addable = state.tasks.filter(function (t) { return (ev.linkedTasks || []).indexOf(t.id) === -1; });
+  var linkOptions = '<option value="">Link a task…</option>' + addable
+    .sort(function (a, b) { return a.title.localeCompare(b.title); })
+    .map(function (t) { return '<option value="' + esc(t.id) + '">' + esc(t.title) + "</option>"; }).join("");
+
+  root.innerHTML =
+    '<div class="slide-back' + openCls + '"></div>' +
+    '<aside class="slide' + openCls + '" role="dialog" aria-label="Event details">' +
+      "<header><h3>Event</h3>" +
+        "<button type='button' class='btn tiny danger' id='pDelete'>Delete</button>" +
+        "<button type='button' class='btn tiny' id='pClose'>Close</button></header>" +
+      '<div class="slide-body">' +
+        '<div class="slide-sec"><div class="f"><label for="pTitle">Title</label>' +
+          '<textarea id="pTitle" data-f="title">' + esc(ev.title) + "</textarea></div></div>" +
+        '<div class="slide-sec"><div class="fgrid">' +
+          '<div class="f wide"><label for="pType">Type</label><select id="pType">' + typeOptions + "</select></div>" +
+          '<div class="f wide"><label for="pDate">Date</label><input id="pDate" type="date" value="' + esc(ev.date || "") + '"></div>' +
+          '<div class="f"><label for="pStart">Start</label><input id="pStart" type="time" value="' + esc(ev.startTime || "") + '"></div>' +
+          '<div class="f"><label for="pEnd">End</label><input id="pEnd" type="time" value="' + esc(ev.endTime || "") + '"></div>' +
+        "</div></div>" +
+        '<div class="slide-sec"><h4>Agenda</h4><div class="f">' +
+          '<textarea id="pAgenda" style="min-height:90px">' + esc(ev.agenda || "") + "</textarea></div></div>" +
+        '<div class="slide-sec"><h4>Linked tasks</h4><div class="linked">' + linked + "</div>" +
+          '<div class="inline-form"><select id="pLinkTask" class="sel" style="flex:1;max-width:none">' + linkOptions + "</select></div></div>" +
+      "</div></aside>";
+
+  wireEventPanel(ev);
+}
+
+function wireEventPanel(ev) {
+  var root = document.getElementById("panelRoot");
+  var q = function (sel) { return root.querySelector(sel); };
+
+  root.querySelector(".slide-back").addEventListener("click", closePanel);
+  q("#pClose").addEventListener("click", closePanel);
+  q("#pDelete").addEventListener("click", function () {
+    confirmDialog("Delete event?", "“" + ev.title + "” will be removed from the calendar.", "Delete")
+      .then(function (ok) {
+        if (!ok) return;
+        deleteEvent(ev.id);
+        closePanel();
+        renderSchedule();
+        renderDashboard();
+      });
+  });
+
+  var title = q("#pTitle");
+  autoGrow(title);
+  title.addEventListener("input", function () { ev.title = this.value; autoGrow(this); afterEventEdit(); });
+
+  q("#pType").addEventListener("change", function () { ev.type = this.value; afterEventEdit(); });
+  q("#pDate").addEventListener("change", function () {
+    if (!this.value) return;
+    ev.date = this.value;
+    calCursor = ev.date;
+    afterEventEdit();
+  });
+  q("#pStart").addEventListener("change", function () { ev.startTime = this.value || ""; afterEventEdit(); });
+  q("#pEnd").addEventListener("change", function () { ev.endTime = this.value || ""; afterEventEdit(); });
+
+  var ag = q("#pAgenda");
+  autoGrow(ag);
+  ag.addEventListener("input", function () { ev.agenda = this.value; autoGrow(this); save(); renderSchedule(); });
+
+  q("#pLinkTask").addEventListener("change", function () {
+    if (!this.value) return;
+    if (ev.linkedTasks.indexOf(this.value) === -1) ev.linkedTasks.push(this.value);
+    afterEventEdit();
+    renderPanel();
+  });
+  Array.prototype.forEach.call(root.querySelectorAll("[data-unlink]"), function (b) {
+    b.addEventListener("click", function () {
+      var id = this.getAttribute("data-unlink");
+      ev.linkedTasks = ev.linkedTasks.filter(function (x) { return x !== id; });
+      afterEventEdit();
+      renderPanel();
+    });
+  });
+  Array.prototype.forEach.call(root.querySelectorAll("[data-open-task]"), function (b) {
+    b.addEventListener("click", function () { openTaskPanel(this.getAttribute("data-open-task")); });
+  });
+}
+
+/* =========================================================
+   Supervisor
+   ========================================================= */
+var expandedMeetings = {};
+var openQSuggestions = null;
+
+function addMeeting() {
+  var m = {
+    id: uid(), date: today(), participants: "", discussed: "", feedback: "",
+    todos: [], attachments: []
+  };
+  state.meetings.push(m);
+  expandedMeetings[m.id] = true;
+  save();
+  return m;
+}
+function deleteMeeting(id) {
+  state.meetings = state.meetings.filter(function (m) { return m.id !== id; });
+  delete expandedMeetings[id];
+  save();
+}
+function findMeeting(id) {
+  return state.meetings.filter(function (m) { return m.id === id; })[0] || null;
+}
+
+function agendaPoints(ev) {
+  return String((ev && ev.agenda) || "").split("\n")
+    .map(function (s) { return s.trim(); })
+    .filter(function (s) { return s.length > 0; });
+}
+function setAgendaPoints(ev, points) {
+  ev.agenda = points.join("\n");
+}
+
+function renderNextMeetingPrep() {
+  var el = document.getElementById("nextMeetingPrep");
+  var ev = nextSupervisorEvent();
+
+  if (!ev) {
+    el.innerHTML = "<h2>Next meeting &mdash; preparation</h2>" +
+      "<div class='sub'>No upcoming supervisor meeting is scheduled. Agenda points are collected on the meeting’s calendar event.</div>" +
+      "<div class='inline-form'><button type='button' class='btn primary' id='schedNext'>Schedule the next meeting</button></div>";
+    return;
+  }
+
+  var points = agendaPoints(ev);
+  var pointsHtml = points.length
+    ? points.map(function (p, i) {
+        return "<div class='pt-row'><span class='sub'>" + (i + 1) + ".</span>" +
+          "<input value='" + esc(p) + "' data-point='" + i + "'>" +
+          "<button type='button' class='btn tiny danger' data-point-del='" + i + "'>Remove</button></div>";
+      }).join("")
+    : "<div class='sub'>No agenda points yet.</div>";
+
+  var sugg = "";
+  if (openQSuggestions) {
+    sugg = openQSuggestions.length
+      ? "<div class='sugg'><div class='subhead'>Open questions from read and excerpted sources</div>" +
+          openQSuggestions.map(function (s, i) {
+            return "<div class='sugg-item'><div class='sugg-text'><b>" + esc(s.source) + "</b><br>" + esc(s.text) + "</div>" +
+              "<button type='button' class='btn tiny' data-sugg-add='" + i + "'>Add</button></div>";
+          }).join("") +
+          "<div class='inline-form' style='justify-content:flex-end'><button type='button' class='btn tiny' id='suggDismiss'>Dismiss</button></div></div>"
+      : "<div class='sugg'><div class='sub'>No open questions recorded yet on sources with status “read” or “excerpted”, or they are all on the agenda already.</div>" +
+          "<div class='inline-form' style='justify-content:flex-end'><button type='button' class='btn tiny' id='suggDismiss'>Dismiss</button></div></div>";
+  }
+
+  el.innerHTML = "<h2>Next meeting &mdash; preparation</h2>" +
+    "<div class='sub' style='margin-bottom:8px'>" + esc(ev.title) + " &middot; " + esc(formatDate(ev.date)) +
+      (ev.startTime ? ", " + esc(ev.startTime) : "") + " &middot; in " + daysBetween(today(), ev.date) + " days</div>" +
+    pointsHtml +
+    "<form class='inline-form' id='pointForm'><input id='pointInput' placeholder='Add an agenda point' autocomplete='off'>" +
+      "<button type='submit' class='btn'>Add</button>" +
+      "<button type='button' class='btn' id='pullOpenQ'>Pull open questions from literature</button></form>" +
+    sugg;
+}
+
+function todoHtml(m, td, i) {
+  var t = td.taskId ? findTask(td.taskId) : null;
+  var right = t
+    ? "<span class='pill' data-go-kind='task' data-go-id='" + esc(t.id) + "' style='cursor:pointer'>" +
+        esc(STATUS_LABEL[t.status] || t.status) + "</span>"
+    : "<button type='button' class='btn tiny' data-todo-board='" + i + "'>Add to board</button>";
+  return "<div class='todo" + (td.done ? " done" : "") + "'>" +
+    "<input type='checkbox' data-todo-done='" + i + "'" + (td.done ? " checked" : "") + ">" +
+    "<input class='todo-text' value='" + esc(td.text) + "' data-todo-text='" + i + "'>" +
+    right +
+    "<button type='button' class='btn tiny danger' data-todo-del='" + i + "'>Delete</button></div>";
+}
+
+function meetingHtml(m, idx) {
+  var open = !!expandedMeetings[m.id];
+  var scope = "mt" + idx;
+  var todos = (m.todos || []);
+  var openTodos = todos.filter(function (t) { return !t.done; }).length;
+
+  var head = "<div class='mtg-head' data-mtg-toggle='" + esc(m.id) + "'>" +
+    "<span class='mtg-caret'>" + (open ? "&#9660;" : "&#9654;") + "</span>" +
+    "<span class='mtg-date'>" + esc(formatDate(m.date) || "no date") + "</span>" +
+    "<span class='mtg-who'>" + esc(m.participants || "no participants noted") + "</span>" +
+    (todos.length ? "<span class='pill'>" + openTodos + " / " + todos.length + " to-dos open</span>" : "") +
+    ((m.attachments || []).length ? "<span class='pill'>" + m.attachments.length + " links</span>" : "") +
+    "</div>";
+
+  if (!open) return "<div class='panel meeting' data-meeting='" + esc(m.id) + "'>" + head + "</div>";
+
+  var body = "<div class='mtg-body'>" +
+    "<div class='slide-sec' style='padding-top:12px'><div class='fgrid'>" +
+      "<div class='f'><label>Date</label><input type='date' data-m='date' value='" + esc(m.date || "") + "'></div>" +
+      "<div class='f'><label>Participants</label><input data-m='participants' value='" + esc(m.participants || "") +
+        "' placeholder='Who was there?'></div>" +
+    "</div></div>" +
+    "<div class='slide-sec'><h4>Discussed</h4><div class='f'><textarea data-m='discussed'>" +
+      esc(m.discussed || "") + "</textarea></div></div>" +
+    "<div class='slide-sec'><h4>Feedback</h4><div class='f'><textarea data-m='feedback' style='min-height:100px'>" +
+      esc(m.feedback || "") + "</textarea></div></div>" +
+    "<div class='slide-sec'><h4>To-dos</h4>" +
+      (todos.length ? todos.map(function (td, i) { return todoHtml(m, td, i); }).join("")
+                    : "<div class='sub'>No to-dos from this meeting.</div>") +
+      "<form class='inline-form' data-todo-form='1'><input placeholder='Add a to-do' autocomplete='off'>" +
+        "<button type='submit' class='btn'>Add</button></form></div>" +
+    attachmentsSectionHtml(m, scope) +
+    "<div class='inline-form' style='justify-content:flex-end'>" +
+      "<button type='button' class='btn tiny danger' data-mtg-del='" + esc(m.id) + "'>Delete this meeting log</button></div>" +
+    "</div>";
+
+  return "<div class='panel meeting' data-meeting='" + esc(m.id) + "'>" + head + body + "</div>";
+}
+
+function renderSupervisor() {
+  renderNextMeetingPrep();
+
+  var list = state.meetings.slice().sort(function (a, b) {
+    return String(b.date).localeCompare(String(a.date));
+  });
+  document.getElementById("supCount").textContent =
+    state.meetings.length + (state.meetings.length === 1 ? " meeting log" : " meeting logs");
+
+  var el = document.getElementById("meetingList");
+  if (!list.length) {
+    el.innerHTML = emptyBox("No meeting logs yet",
+      "Use “New meeting log” after a supervisor meeting: participants, what was discussed, the feedback, and the to-dos you can push straight onto the board.");
+    return;
+  }
+  el.innerHTML = list.map(meetingHtml).join("");
+  list.forEach(function (m, idx) {
+    if (!expandedMeetings[m.id]) return;
+    var root = el.querySelector("[data-meeting='" + m.id + "']");
+    if (!root) return;
+    wireMeeting(root, m, "mt" + idx);
+  });
+}
+
+function afterMeetingEdit(rerender) {
+  save();
+  renderDashboard();
+  if (rerender !== false) renderSupervisor();
+  else renderFooter();
+}
+
+function wireMeeting(root, m, scope) {
+  Array.prototype.forEach.call(root.querySelectorAll("[data-m]"), function (el) {
+    var key = el.getAttribute("data-m");
+    if (el.tagName === "TEXTAREA") autoGrow(el);
+    el.addEventListener("input", function () {
+      m[key] = this.value;
+      if (this.tagName === "TEXTAREA") autoGrow(this);
+      save();
+      renderFooter();
+    });
+    if (key === "date") {
+      el.addEventListener("change", function () { m.date = this.value; afterMeetingEdit(); });
+    }
+  });
+
+  Array.prototype.forEach.call(root.querySelectorAll("[data-todo-done]"), function (cb) {
+    cb.addEventListener("change", function () {
+      m.todos[Number(this.getAttribute("data-todo-done"))].done = this.checked;
+      afterMeetingEdit();
+    });
+  });
+  Array.prototype.forEach.call(root.querySelectorAll("[data-todo-text]"), function (inp) {
+    inp.addEventListener("input", function () {
+      m.todos[Number(this.getAttribute("data-todo-text"))].text = this.value;
+      save();
+      renderFooter();
+    });
+  });
+  Array.prototype.forEach.call(root.querySelectorAll("[data-todo-del]"), function (b) {
+    b.addEventListener("click", function () {
+      var i = Number(this.getAttribute("data-todo-del"));
+      confirmDialog("Delete to-do?", "“" + m.todos[i].text + "” will be removed from this meeting log. Any task already created from it stays on the board.", "Delete")
+        .then(function (ok) {
+          if (!ok) return;
+          m.todos.splice(i, 1);
+          afterMeetingEdit();
+        });
+    });
+  });
+  Array.prototype.forEach.call(root.querySelectorAll("[data-todo-board]"), function (b) {
+    b.addEventListener("click", function () {
+      var i = Number(this.getAttribute("data-todo-board"));
+      var td = m.todos[i];
+      var t = addTask({
+        title: td.text || "Supervisor to-do",
+        workPackageId: null, status: "todo", priority: "medium", dueDate: "", isBlocker: false
+      });
+      td.taskId = t.id;
+      save();
+      renderBoard();
+      afterMeetingEdit();
+    });
+  });
+  var tf = root.querySelector("[data-todo-form]");
+  if (tf) {
+    tf.addEventListener("submit", function (e) {
+      e.preventDefault();
+      var inp = this.querySelector("input");
+      var v = inp.value.trim();
+      if (!v) return;
+      m.todos.push({ id: uid(), text: v, done: false, taskId: null });
+      afterMeetingEdit();
+    });
+  }
+
+  wireAttachments(root, m, function () { afterMeetingEdit(); }, scope);
+
+  var del = root.querySelector("[data-mtg-del]");
+  if (del) {
+    del.addEventListener("click", function () {
+      confirmDialog("Delete meeting log?", "The log of " + formatDate(m.date) +
+        " will be removed permanently, including its to-dos and links.", "Delete")
+        .then(function (ok) {
+          if (!ok) return;
+          deleteMeeting(m.id);
+          renderSupervisor();
+          renderDashboard();
+        });
+    });
+  }
+}
+
+function pullOpenQuestions() {
+  var ev = nextSupervisorEvent();
+  var existing = agendaPoints(ev).map(function (p) { return p.toLowerCase(); });
+  var out = [];
+  state.literature.forEach(function (l) {
+    if (l.status !== "read" && l.status !== "excerpted") return;
+    String((l.excerpt && l.excerpt.openQuestions) || "").split("\n").forEach(function (line) {
+      var s = line.trim();
+      if (!s) return;
+      if (existing.indexOf(s.toLowerCase()) !== -1) return;
+      out.push({ source: [l.authors, l.year].filter(function (x) { return x && x !== "—"; }).join(" ") || l.title, text: s });
+    });
+  });
+  openQSuggestions = out;
+  renderSupervisor();
+}
+
+/* =========================================================
+   Search
+   ========================================================= */
+var searchQuery = "";
+
+function snippetHtml(text, q) {
+  var raw = String(text || "");
+  var i = raw.toLowerCase().indexOf(q);
+  var s;
+  if (i < 0) {
+    s = raw.slice(0, 160) + (raw.length > 160 ? "…" : "");
+  } else {
+    var from = Math.max(0, i - 70);
+    var to = Math.min(raw.length, i + q.length + 100);
+    s = (from > 0 ? "…" : "") + raw.slice(from, to) + (to < raw.length ? "…" : "");
+  }
+  var needle = esc(q).replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  return esc(s).replace(new RegExp("(" + needle + ")", "gi"), "<mark>$1</mark>");
+}
+
+var EXCERPT_LABEL = {
+  keyClaim: "Excerpt · key claim",
+  methodology: "Excerpt · methodology",
+  relevanceToThesis: "Excerpt · relevance to the thesis",
+  openQuestions: "Excerpt · open questions"
+};
+
+function searchAll(q) {
+  var groups = [
+    { key: "tasks", label: "Tasks", hits: [] },
+    { key: "literature", label: "Literature", hits: [] },
+    { key: "quotes", label: "Quotes", hits: [] },
+    { key: "meetings", label: "Meeting feedback", hits: [] },
+    { key: "agenda", label: "Agenda points", hits: [] }
+  ];
+  function push(g, hit) { groups.filter(function (x) { return x.key === g; })[0].hits.push(hit); }
+  function has(s) { return String(s || "").toLowerCase().indexOf(q) !== -1; }
+
+  state.tasks.forEach(function (t) {
+    if (has(t.title)) push("tasks", { kind: "task", id: t.id, title: t.title, field: "Title", text: t.title });
+    (t.notes || []).forEach(function (n) {
+      if (has(n.text)) push("tasks", { kind: "task", id: t.id, title: t.title, field: "Note · " + formatStamp(n.createdAt), text: n.text });
+    });
+  });
+
+  state.literature.forEach(function (l) {
+    if (has(l.title)) push("literature", { kind: "literature", id: l.id, title: l.title, field: "Title", text: l.title });
+    var ex = l.excerpt || {};
+    Object.keys(EXCERPT_LABEL).forEach(function (k) {
+      if (has(ex[k])) push("literature", { kind: "literature", id: l.id, title: l.title, field: EXCERPT_LABEL[k], text: ex[k] });
+    });
+    (l.quotes || []).forEach(function (qt) {
+      if (has(qt.text)) push("quotes", { kind: "literature", id: l.id, title: l.title,
+        field: citationOf(l, qt.page) || "Quote", text: qt.text });
+    });
+  });
+
+  state.meetings.forEach(function (m) {
+    if (has(m.feedback)) push("meetings", { kind: "meeting", id: m.id, title: "Meeting " + formatDate(m.date), field: "Feedback", text: m.feedback });
+  });
+
+  state.events.forEach(function (e) {
+    agendaPoints(e).forEach(function (p) {
+      if (has(p)) push("agenda", { kind: "event", id: e.id, title: e.title + " · " + formatDate(e.date), field: "Agenda point", text: p });
+    });
+  });
+
+  return groups.filter(function (g) { return g.hits.length > 0; });
+}
+
+function renderSearch() {
+  var q = searchQuery.trim().toLowerCase();
+  var countEl = document.getElementById("searchCount");
+  var el = document.getElementById("searchResults");
+
+  if (q.length < 2) {
+    countEl.textContent = "";
+    el.innerHTML = emptyBox("Type at least two characters",
+      "Searches task titles and notes, all four excerpt fields, quotes, meeting feedback and agenda points. Press / from anywhere to get here.");
+    return;
+  }
+
+  var groups = searchAll(q);
+  var total = groups.reduce(function (a, g) { return a + g.hits.length; }, 0);
+  countEl.textContent = total + (total === 1 ? " match" : " matches");
+
+  if (!total) {
+    el.innerHTML = emptyBox("No matches", "Nothing found for “" + searchQuery.trim() + "”.");
+    return;
+  }
+
+  el.innerHTML = groups.map(function (g) {
+    return "<div class='panel res-group'><h2>" + esc(g.label) +
+      " <span class='n'>" + g.hits.length + "</span></h2>" +
+      g.hits.map(function (h) {
+        return "<div class='res' data-go-kind='" + h.kind + "' data-go-id='" + esc(h.id) + "'>" +
+          "<div class='res-title'>" + snippetHtml(h.title, q) + "</div>" +
+          "<div class='res-field'>" + esc(h.field) + "</div>" +
+          "<div class='res-snip'>" + snippetHtml(h.text, q) + "</div></div>";
+      }).join("") + "</div>";
+  }).join("");
+}
+
+function openSearch() {
+  activateTab("search");
+  var inp = document.getElementById("searchInput");
+  inp.focus();
+  inp.select();
+}
+
+/* ---------- click-through from tiles and results ---------- */
+function goTo(kind, id) {
+  if (kind === "task") { openTaskPanel(id); return; }
+  if (kind === "literature") { openLitPanel(id); return; }
+  if (kind === "event") { openEventPanel(id); return; }
+  if (kind === "meeting") {
+    expandedMeetings[id] = true;
+    activateTab("supervisor");
+    renderSupervisor();
+    var el = document.querySelector("[data-meeting='" + id + "']");
+    if (el) el.scrollIntoView({ block: "center" });
+  }
+}
+
+function renderAll() {
+  renderDashboard();
+  renderBoard();
+  renderLiterature();
+  renderSchedule();
+  renderSupervisor();
+  renderSearch();
+  renderFooter();
+  if (panelId && !panelObject()) closePanel();
+  else if (panelId) renderPanel();
+}
+
+/* =========================================================
+   Wiring
+   ========================================================= */
+function activateTab(name) {
+  var tabs = document.getElementById("tabs");
+  Array.prototype.forEach.call(tabs.querySelectorAll("button"), function (b) {
+    b.classList.toggle("active", b.getAttribute("data-tab") === name);
+  });
+  Array.prototype.forEach.call(document.querySelectorAll(".view"), function (v) { v.classList.remove("active"); });
+  var view = document.getElementById("view-" + name);
+  if (view) view.classList.add("active");
+}
+
+document.getElementById("tabs").addEventListener("click", function (e) {
+  var btn = e.target.closest("button[data-tab]");
+  if (!btn) return;
+  activateTab(btn.getAttribute("data-tab"));
+});
+
+/* ---------- board: open card, drag & drop ---------- */
+var boardEl = document.getElementById("board");
+
+boardEl.addEventListener("click", function (e) {
+  var card = e.target.closest(".card");
+  if (!card) return;
+  openTaskPanel(card.getAttribute("data-id"));
+});
+boardEl.addEventListener("keydown", function (e) {
+  if (e.key !== "Enter" && e.key !== " ") return;
+  var card = e.target.closest(".card");
+  if (!card) return;
+  e.preventDefault();
+  openTaskPanel(card.getAttribute("data-id"));
+});
+
+boardEl.addEventListener("dragstart", function (e) {
+  var card = e.target.closest(".card");
+  if (!card) return;
+  dragId = card.getAttribute("data-id");
+  e.dataTransfer.effectAllowed = "move";
+  try { e.dataTransfer.setData("text/plain", dragId); } catch (err) { /* older browsers */ }
+  setTimeout(function () { card.classList.add("dragging"); }, 0);
+});
+
+boardEl.addEventListener("dragover", function (e) {
+  if (!dragId) return;
+  var body = e.target.closest(".col-body");
+  if (!body) return;
+  e.preventDefault();
+  e.dataTransfer.dropEffect = "move";
+  if (dropPh.parentNode !== body) body.appendChild(dropPh);
+  var col = body.closest(".col");
+  Array.prototype.forEach.call(document.querySelectorAll(".col.drag-over"), function (c) {
+    if (c !== col) c.classList.remove("drag-over");
+  });
+  col.classList.add("drag-over");
+});
+
+boardEl.addEventListener("drop", function (e) {
+  if (!dragId) return;
+  var body = e.target.closest(".col-body");
+  if (!body) return;
+  e.preventDefault();
+  var status = body.getAttribute("data-status");
+  var t = findTask(dragId);
+  var moved = t && t.status !== status;
+  if (moved) { setTaskStatus(t, status); save(); }
+  var id = dragId;
+  dragId = null;
+  cleanupDrag();
+  if (moved) {
+    renderBoard();
+    renderDashboard();
+    if (panelKind === "task" && panelId === id) renderPanel();
+  }
+});
+
+boardEl.addEventListener("dragend", function () { dragId = null; cleanupDrag(); });
+
+/* ---------- shared multi-select behaviour ---------- */
+var FILTER_STORES = { board: filters, lit: litFilters };
+var FILTER_RERENDER = { board: renderBoard, lit: renderLiterature };
+
+document.addEventListener("click", function (e) {
+  var toggle = e.target.closest("[data-ms-toggle]");
+  if (toggle) {
+    var pop = toggle.parentNode.querySelector(".ms-pop");
+    var wasHidden = pop.classList.contains("hidden");
+    closeAllPopovers();
+    if (wasHidden) pop.classList.remove("hidden");
+    return;
+  }
+  var clear = e.target.closest("[data-ms-clear]");
+  if (clear) {
+    var store = clear.getAttribute("data-ms-store");
+    FILTER_STORES[store][clear.getAttribute("data-ms-clear")] = [];
+    FILTER_RERENDER[store]();
+    return;
+  }
+  if (!e.target.closest(".ms")) closeAllPopovers();
+});
+
+document.addEventListener("change", function (e) {
+  var cb = e.target.closest("input[data-ms]");
+  if (!cb) return;
+  var store = cb.getAttribute("data-ms-store");
+  var key = cb.getAttribute("data-ms");
+  var arr = FILTER_STORES[store][key];
+  if (cb.checked) { if (arr.indexOf(cb.value) === -1) arr.push(cb.value); }
+  else { FILTER_STORES[store][key] = arr.filter(function (x) { return x !== cb.value; }); }
+  FILTER_RERENDER[store]();
+});
+
+/* ---------- board filter bar ---------- */
+var filterBar = document.querySelector("#view-board .filterbar");
+
+filterBar.addEventListener("change", function (e) {
+  if (e.target.id === "fPriority") { filters.priority = e.target.value; renderBoard(); }
+  if (e.target.id === "fOverdue") { filters.overdue = e.target.checked; renderBoard(); }
+  if (e.target.id === "fBlockers") { filters.blockers = e.target.checked; renderBoard(); }
+});
+
+document.getElementById("fReset").addEventListener("click", function () {
+  resetFilters();
+  closeAllPopovers();
+  renderBoard();
+});
+document.getElementById("btnNewTask").addEventListener("click", newTask);
+
+/* ---------- literature: filters, sorting, rows ---------- */
+document.querySelector("#view-literature .filterbar").addEventListener("change", function (e) {
+  var map = { lfStatus: "status", lfType: "type", lfRelevance: "relevance", lfChapter: "chapter" };
+  var key = map[e.target.id];
+  if (!key) return;
+  litFilters[key] = e.target.value;
+  renderLiterature();
+});
+
+document.getElementById("lfReset").addEventListener("click", function () {
+  resetLitFilters();
+  closeAllPopovers();
+  renderLiterature();
+});
+document.getElementById("btnNewLit").addEventListener("click", newLiterature);
+document.getElementById("btnExportQuotes").addEventListener("click", exportQuotes);
+
+document.getElementById("litList").addEventListener("click", function (e) {
+  var th = e.target.closest("th[data-sort]");
+  if (th) {
+    var key = th.getAttribute("data-sort");
+    if (litSort.key === key) litSort.dir = litSort.dir === "asc" ? "desc" : "asc";
+    else { litSort.key = key; litSort.dir = (key === "relevance" || key === "year") ? "desc" : "asc"; }
+    renderLiterature();
+    return;
+  }
+  var row = e.target.closest("tr[data-lit]");
+  if (row) openLitPanel(row.getAttribute("data-lit"));
+});
+
+/* ---------- schedule ---------- */
+document.getElementById("calSeg").addEventListener("click", function (e) {
+  var b = e.target.closest("button[data-calview]");
+  if (b) setCalView(b.getAttribute("data-calview"));
+});
+document.getElementById("calPrev").addEventListener("click", function () { calStep(-1); });
+document.getElementById("calNext").addEventListener("click", function () { calStep(1); });
+document.getElementById("calToday").addEventListener("click", function () {
+  calCursor = today();
+  renderSchedule();
+});
+document.getElementById("btnNewEvent").addEventListener("click", function () { newEvent(calCursor); });
+
+document.getElementById("calBody").addEventListener("click", function (e) {
+  var item = e.target.closest("[data-ci-kind]");
+  if (item) {
+    var kind = item.getAttribute("data-ci-kind");
+    var id = item.getAttribute("data-ci-id");
+    if (kind === "event") openEventPanel(id);
+    else if (kind === "task") openTaskPanel(id);
+    else if (kind === "literature") openLitPanel(id);
+    return;
+  }
+  var more = e.target.closest("[data-more]");
+  if (more) {
+    calCursor = more.getAttribute("data-more");
+    setCalView("day");
+    return;
+  }
+  var slot = e.target.closest("[data-newslot]");
+  if (slot) {
+    newEvent(slot.getAttribute("data-newslot"), Number(slot.getAttribute("data-hour")));
+    return;
+  }
+  var wday = e.target.closest("[data-newday]");
+  if (wday) {
+    newEvent(wday.getAttribute("data-newday"));
+    return;
+  }
+  var cell = e.target.closest("[data-day]");
+  if (cell) {
+    calCursor = cell.getAttribute("data-day");
+    setCalView("day");
+  }
+});
+
+/* ---------- dashboard ---------- */
+document.getElementById("focusOnly").addEventListener("change", function () {
+  focusOnly = this.checked;
+  renderDashboard();
+});
+
+document.getElementById("view-dashboard").addEventListener("click", function (e) {
+  var unblock = e.target.closest("[data-unblock]");
+  if (unblock) {
+    var t = findTask(unblock.getAttribute("data-unblock"));
+    if (t) { t.isBlocker = false; save(); renderBoard(); renderDashboard(); }
+    return;
+  }
+  var rm = e.target.closest("[data-focus-remove]");
+  if (rm) { toggleFocusTask(rm.getAttribute("data-focus-remove")); return; }
+
+  var op = e.target.closest("[data-focus-open]");
+  if (op) { openTaskPanel(op.getAttribute("data-focus-open")); return; }
+
+  if (e.target.id === "goSupervisor") { activateTab("supervisor"); return; }
+
+  var go = e.target.closest("[data-go-kind]");
+  if (go) goTo(go.getAttribute("data-go-kind"), go.getAttribute("data-go-id"));
+});
+
+document.getElementById("view-dashboard").addEventListener("change", function (e) {
+  var done = e.target.closest("[data-focus-done]");
+  if (done) {
+    var id = done.getAttribute("data-focus-done");
+    var t = findTask(id);
+    if (t) {
+      setTaskStatus(t, done.checked ? "done" : "todo");
+      if (done.checked) state.focusToday = state.focusToday.filter(function (x) { return x !== id; });
+      save();
+      renderBoard();
+      renderSchedule();
+      renderDashboard();
+    }
+    return;
+  }
+  if (e.target.id === "focusPick") {
+    if (!e.target.value) return;
+    toggleFocusTask(e.target.value);
+    return;
+  }
+});
+
+document.getElementById("view-dashboard").addEventListener("input", function (e) {
+  var w = e.target.closest("[data-words]");
+  if (!w) return;
+  var c = chapterById(w.getAttribute("data-words"));
+  if (!c) return;
+  c.currentWords = Math.max(0, Number(w.value) || 0);
+  save();
+  /* update the bars in place so the field keeps focus */
+  var row = w.closest(".prog-row");
+  var tgt = Number(c.targetWords) || 0;
+  if (row) row.querySelector(".bar > i").style.width = Math.min(100, pctOf(c.currentWords, tgt)) + "%";
+  var cur = 0, all = 0;
+  state.chapters.forEach(function (x) { cur += Number(x.currentWords) || 0; all += Number(x.targetWords) || 0; });
+  var totalEl = document.getElementById("wordTotal");
+  if (totalEl) {
+    totalEl.querySelector(".bar > i").style.width = Math.min(100, pctOf(cur, all)) + "%";
+    totalEl.querySelector(".prog-val").textContent =
+      cur.toLocaleString("en-GB") + " / " + all.toLocaleString("en-GB") + " · " + pctOf(cur, all) + "%";
+  }
+  renderFooter();
+});
+
+/* ---------- supervisor ---------- */
+document.getElementById("btnNewMeeting").addEventListener("click", function () {
+  activateTab("supervisor");
+  addMeeting();
+  renderSupervisor();
+  renderDashboard();
+});
+
+document.getElementById("meetingList").addEventListener("click", function (e) {
+  var go = e.target.closest("[data-go-kind]");
+  if (go) { goTo(go.getAttribute("data-go-kind"), go.getAttribute("data-go-id")); return; }
+  var head = e.target.closest("[data-mtg-toggle]");
+  if (!head) return;
+  var id = head.getAttribute("data-mtg-toggle");
+  expandedMeetings[id] = !expandedMeetings[id];
+  renderSupervisor();
+});
+
+document.getElementById("nextMeetingPrep").addEventListener("click", function (e) {
+  if (e.target.id === "schedNext") {
+    var ev = addEvent({
+      date: dateAdd(today(), 7), startTime: "10:00", endTime: "11:00",
+      title: "Supervisor meeting", type: "Supervisor"
+    });
+    renderSchedule();
+    renderSupervisor();
+    renderDashboard();
+    return;
+  }
+  if (e.target.id === "pullOpenQ") { pullOpenQuestions(); return; }
+  if (e.target.id === "suggDismiss") { openQSuggestions = null; renderSupervisor(); return; }
+
+  var add = e.target.closest("[data-sugg-add]");
+  if (add) {
+    var s = openQSuggestions[Number(add.getAttribute("data-sugg-add"))];
+    var ev2 = nextSupervisorEvent();
+    if (s && ev2) {
+      var pts = agendaPoints(ev2);
+      pts.push(s.text);
+      setAgendaPoints(ev2, pts);
+      openQSuggestions = openQSuggestions.filter(function (x) { return x !== s; });
+      save();
+      renderSchedule();
+      renderSupervisor();
+      renderDashboard();
+    }
+    return;
+  }
+  var del = e.target.closest("[data-point-del]");
+  if (del) {
+    var ev3 = nextSupervisorEvent();
+    var i = Number(del.getAttribute("data-point-del"));
+    var list = agendaPoints(ev3);
+    confirmDialog("Remove agenda point?", "“" + list[i] + "” will be removed from the meeting agenda.", "Remove")
+      .then(function (ok) {
+        if (!ok) return;
+        list.splice(i, 1);
+        setAgendaPoints(ev3, list);
+        save();
+        renderSchedule();
+        renderSupervisor();
+        renderDashboard();
+      });
+  }
+});
+
+document.getElementById("nextMeetingPrep").addEventListener("submit", function (e) {
+  if (e.target.id !== "pointForm") return;
+  e.preventDefault();
+  var inp = document.getElementById("pointInput");
+  var v = inp.value.trim();
+  if (!v) return;
+  var ev = nextSupervisorEvent();
+  if (!ev) return;
+  var pts = agendaPoints(ev);
+  pts.push(v);
+  setAgendaPoints(ev, pts);
+  save();
+  renderSchedule();
+  renderSupervisor();
+  renderDashboard();
+  var again = document.getElementById("pointInput");
+  if (again) again.focus();
+});
+
+document.getElementById("nextMeetingPrep").addEventListener("input", function (e) {
+  var p = e.target.closest("[data-point]");
+  if (!p) return;
+  var ev = nextSupervisorEvent();
+  if (!ev) return;
+  var pts = agendaPoints(ev);
+  pts[Number(p.getAttribute("data-point"))] = p.value;
+  setAgendaPoints(ev, pts);
+  save();
+  renderFooter();
+});
+
+/* ---------- search ---------- */
+document.getElementById("searchInput").addEventListener("input", function () {
+  searchQuery = this.value;
+  renderSearch();
+});
+document.getElementById("searchClear").addEventListener("click", function () {
+  searchQuery = "";
+  document.getElementById("searchInput").value = "";
+  renderSearch();
+  document.getElementById("searchInput").focus();
+});
+document.getElementById("searchResults").addEventListener("click", function (e) {
+  var go = e.target.closest("[data-go-kind]");
+  if (go) goTo(go.getAttribute("data-go-kind"), go.getAttribute("data-go-id"));
+});
+
+/* ---------- keyboard ---------- */
+document.addEventListener("keydown", function (e) {
+  if (e.key === "Escape") {
+    if (panelId) { closePanel(); return; }
+    closeAllPopovers();
+    return;
+  }
+  if (e.key !== "n" && e.key !== "N" && e.key !== "/") return;
+  if (e.metaKey || e.ctrlKey || e.altKey) return;
+  var el = document.activeElement;
+  if (el && (el.tagName === "INPUT" || el.tagName === "TEXTAREA" || el.tagName === "SELECT" || el.isContentEditable)) return;
+  if (document.getElementById("modalRoot").firstChild) return;
+  if (panelId) return;
+  e.preventDefault();
+  if (e.key === "/") openSearch();
+  else newTask();
+});
+
+
+document.getElementById("btnExport").addEventListener("click", exportState);
+document.getElementById("btnImport").addEventListener("click", function () {
+  document.getElementById("importFile").click();
+});
+document.getElementById("importFile").addEventListener("change", function () {
+  if (this.files && this.files[0]) importFromFile(this.files[0]);
+  this.value = "";
+});
+document.getElementById("btnClearSample").addEventListener("click", clearSampleData);
+
+/* =========================================================
+   Boot
+   ========================================================= */
+load();
+loadCalView();
+renderAll();
+</script>
+</body>
+</html>
